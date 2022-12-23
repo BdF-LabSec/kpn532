@@ -1,5 +1,8 @@
 # kpn532
-Arduino PN532 proxy (mini relay)
+
+Arduino PN532 proxy (mini relay).
+
+Terminal available on USB virtual COM port at 115200 bps.
 
 
 ## Wiring diagram
@@ -49,6 +52,15 @@ A normal _waiting_ time is around ~383µs for this instruction
 ![Measured waiting time for GetVersion instruction on direct configuration](assets_arduino/kpn532_direct_getversion.png)
 
 The proxified penalty is around 20ms, more or less depending on the payload size.
+
+## Behavior
+
+Presented UID can be different from the original.
+
+- Original UID: `0495910A5D6D80`
+- Presented UID: `0895910A`
+    - `08` is forced by `PN532` design ;
+    - Only 4 bytes in total, 3 bytes available.
 
 ## Traces
 
@@ -418,3 +430,12 @@ Application ID 0x000000 (PICC)
 
 --------------------------------------
 ```
+
+## Licence
+CC BY 4.0 licence - https://creativecommons.org/licenses/by/4.0/
+
+## Author
+
+Benjamin DELPY `gentilkiwi`, you can contact me on Twitter ( @gentilkiwi ) or by mail ( benjamin.delpy [at ] banque-france.fr )
+
+This is a POC / experimental development, please respect its philosophy and don't use it for bad things!
