@@ -39,7 +39,7 @@ Terminal available on USB virtual COM port at 115200 bps.
 
 ## Picture
 
-![Picture of Arduino UNO R3 and two Elechouse NFC module v3, wired to SPI bus & powered](assets_arduino/kpn532_direct.png)
+![Picture of Arduino UNO R3 and two Elechouse NFC module v3, wired to SPI bus & powered](assets_arduino/kpn532_direct.jpg)
 
 ## Performance
 
