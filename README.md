@@ -99,6 +99,11 @@ With a NXP TagInfo scan
 
 ### Verbose
 
+- `<R` from the real reader
+- `>R` to the real reader
+- `<C` from the real card
+- `>C` to the real card
+
 ```
   .#####.         mimicard 0.1 (Arduino - single board)
  .## ^ ##.__ _    "A La Vie, A L'Amour" - (oe.eo)
