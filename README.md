@@ -4,11 +4,22 @@ Arduino PN532 proxy (mini relay).
 
 Minimal SPI library at 4 MHz (maximum with availble divisors on the Arduino), using IRQ insted of status polling.
 
-- I2C supports standard mode (100 kHz) and fast mode (400 kHz) ;
-- HSU supports high speed link (1.288 Mbit/s) ;
-- **SPI is 5 MHz maximum**.
+PN532 supports:
+- I2C standard mode (100 kHz) and fast mode (400 kHz) ;
+- HSU high speed link (1.288 Mbit/s) ;
+- **SPI at 5 MHz maximum**.
 
 Terminal available on USB virtual COM port at 115200 bps.
+
+
+## Hardware list
+
+- 1 x Arduino Uno R3
+- 2 x Elechouse NFC Module V3 (or V4)
+- 15 x Dupont wires
+    - 1 x M/M
+    - 7 x F/M
+    - 7 x F/F
 
 
 ## Wiring diagram
@@ -49,19 +60,6 @@ Terminal available on USB virtual COM port at 115200 bps.
 ![Picture of Arduino UNO R3 and two Elechouse NFC module v3, wired to SPI bus & powered](assets_arduino/kpn532_direct.jpg)
 
 
-## Performance
-
-Measured _waiting_ time for `GetVersion` instruction (`0x60`) is ~20,3ms
-
-![Measured waiting time for GetVersion instruction on relayed configuration, WTF frames before answer](assets_arduino/kpn532_proxified_getversion.png)
-
-A normal _waiting_ time is around ~383µs for this instruction
-
-![Measured waiting time for GetVersion instruction on direct configuration](assets_arduino/kpn532_direct_getversion.png)
-
-The proxified penalty is around 20ms, more or less depending on the payload size.
-
-
 ## Programming
 
 Arduino IDE is enough to handle build and flash to the device, but you can also flash the `.hex` binary with `avrdude` or another programmer
@@ -71,14 +69,32 @@ avrdude -p atmega328p -c arduino -P COM8 -b 115200 -D -U flash:w:kpn532.hex:i
 ```
 
 
+## Performance
+
+Measured _waiting_ time for `GetVersion` instruction (`0x60`) is ~20,3ms. Two `WTX` frames are present bewtween.
+
+![Measured waiting time for GetVersion instruction on relayed configuration, WTX frames before answer](assets_arduino/kpn532_proxified_getversion.png)
+
+A normal _waiting_ time is around ~383µs for this instruction
+
+![Measured waiting time for GetVersion instruction on direct configuration](assets_arduino/kpn532_direct_getversion.png)
+
+The proxified penalty is around 20ms, more or less depending on the payload size.
+
+You can check timings with `SDR nfc-laboratory v2.0`
+
+
 ## Behavior
 
+### Presented UID
 Presented UID can be different from the original.
-
 - Original UID: `0495910A5D6D80`
 - Presented UID: `0895910A`
     - `08` is forced by `PN532` design ;
     - Only 4 bytes in total, 3 bytes available.
+
+### Seen as `Felica`
+Sometimes the presented card can be seen as `Felica`. Move the original card to a better position on the antenna, then try again (with a `reset`).
 
 
 ## Traces
@@ -465,7 +481,7 @@ Signature could not be verified with NXP public key
 Originality Check not successful
 ```
 
-Checks are not successful: signature verification and originality check (with symmetric keys from NXP) are UID dependant, and are using the presented one (not from `GetVersion` answer). As it's altered by PN532 emulation, check fail.
+Checks are not successful: signature verification and originality check (with symmetric keys from NXP) are UID dependant, and are using the presented one (not from `GetVersion` answer). As it's altered by PN532 emulation, checks fail.
 
 
 ## Licence
@@ -499,3 +515,6 @@ This is a POC / experimental development, please respect its philosophy and don'
 
 ### AVRDUDE - AVR Downloader Uploader
 - https://github.com/avrdudes/avrdude
+
+### SDR nfc-laboratory v2.0
+- https://github.com/josevcm/nfc-laboratory
