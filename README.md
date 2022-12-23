@@ -2,8 +2,13 @@
 
 Arduino PN532 proxy (mini relay).
 
-Terminal available on USB virtual COM port at 115200 bps.
+Minimal SPI library at 4 MHz (maximum with availble divisors on the Arduino), using IRQ insted of status polling.
 
+- I2C supports standard mode (100 kHz) and fast mode (400 kHz) ;
+- HSU supports high speed link (1.288 Mbit/s) ;
+- **SPI is 5 MHz maximum**.
+
+Terminal available on USB virtual COM port at 115200 bps.
 
 ## Wiring diagram
 
@@ -431,6 +436,19 @@ Application ID 0x000000 (PICC)
 --------------------------------------
 ```
 
+#### Originality checks
+
+```
+# Originality Check (asymmetric):
+Signature could not be verified with NXP public key
+
+# Originality Check (symmetric):
+Originality Check not successful
+```
+
+Checks are not successful: signature verification and originality check (with symmetric keys from NXP) are UID dependant, and are using the presented one (not from `GetVersion` answer). As it's altered by PN532 emulation, check fail.
+
+
 ## Licence
 CC BY 4.0 licence - https://creativecommons.org/licenses/by/4.0/
 
@@ -439,3 +457,18 @@ CC BY 4.0 licence - https://creativecommons.org/licenses/by/4.0/
 Benjamin DELPY `gentilkiwi`, you can contact me on Twitter ( @gentilkiwi ) or by mail ( benjamin.delpy [at ] banque-france.fr )
 
 This is a POC / experimental development, please respect its philosophy and don't use it for bad things!
+
+## References
+
+### Arduino UNO R3
+- https://docs.arduino.cc/hardware/uno-rev3
+- https://docs.arduino.cc/static/456435a38ab7cadcf0d9e4d6de11b9bb/A000066-datasheet.pdf
+
+### Elechouse NFC Module
+- https://www.elechouse.com/product/pn532-nfc-rfid-module-v4/ (same as V3)
+- https://www.elechouse.com/elechouse/images/product/PN532_module_V3/PN532_%20Manual_V3.pdf
+
+### NXP PN532
+- https://www.nxp.com/products/rfid-nfc/nfc-hf/nfc-readers/nfc-integrated-solution:PN5321A3HN
+- https://www.nxp.com/docs/en/nxp/data-sheets/PN532_C1.pdf
+- https://www.nxp.com/docs/en/user-guide/141520.pdf
