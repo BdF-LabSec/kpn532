@@ -485,6 +485,9 @@ This is a POC / experimental development, please respect its philosophy and don'
 - https://docs.arduino.cc/hardware/uno-rev3
 - https://docs.arduino.cc/static/456435a38ab7cadcf0d9e4d6de11b9bb/A000066-datasheet.pdf
 
+#### Wiring diagram adapted from
+- http://busyducks.com/ascii-art-arduinos
+
 ### Elechouse NFC Module
 - https://www.elechouse.com/product/pn532-nfc-rfid-module-v4/ (same as V3)
 - https://www.elechouse.com/elechouse/images/product/PN532_module_V3/PN532_%20Manual_V3.pdf
