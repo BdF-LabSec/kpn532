@@ -10,6 +10,7 @@ Minimal SPI library at 4 MHz (maximum with availble divisors on the Arduino), us
 
 Terminal available on USB virtual COM port at 115200 bps.
 
+
 ## Wiring diagram
 
 ```
@@ -42,9 +43,11 @@ Terminal available on USB virtual COM port at 115200 bps.
  \_______________________/                                                           VERBOSE   p < > q
 ```
 
+
 ## Picture
 
 ![Picture of Arduino UNO R3 and two Elechouse NFC module v3, wired to SPI bus & powered](assets_arduino/kpn532_direct.jpg)
+
 
 ## Performance
 
@@ -58,6 +61,16 @@ A normal _waiting_ time is around ~383µs for this instruction
 
 The proxified penalty is around 20ms, more or less depending on the payload size.
 
+
+## Programming
+
+Arduino IDE is enough to handle build and flash to the device, but you can also flash the `.hex` binary with `avrdude` or another programmer
+
+```
+avrdude -p atmega328p -c arduino -P COM8 -b 115200 -D -U flash:w:kpn532.hex:i
+```
+
+
 ## Behavior
 
 Presented UID can be different from the original.
@@ -66,6 +79,7 @@ Presented UID can be different from the original.
 - Presented UID: `0895910A`
     - `08` is forced by `PN532` design ;
     - Only 4 bytes in total, 3 bytes available.
+
 
 ## Traces
 
@@ -457,11 +471,13 @@ Checks are not successful: signature verification and originality check (with sy
 ## Licence
 CC BY 4.0 licence - https://creativecommons.org/licenses/by/4.0/
 
+
 ## Author
 
 Benjamin DELPY `gentilkiwi`, you can contact me on Twitter ( @gentilkiwi ) or by mail ( benjamin.delpy [at ] banque-france.fr )
 
 This is a POC / experimental development, please respect its philosophy and don't use it for bad things!
+
 
 ## References
 
@@ -477,3 +493,6 @@ This is a POC / experimental development, please respect its philosophy and don'
 - https://www.nxp.com/products/rfid-nfc/nfc-hf/nfc-readers/nfc-integrated-solution:PN5321A3HN
 - https://www.nxp.com/docs/en/nxp/data-sheets/PN532_C1.pdf
 - https://www.nxp.com/docs/en/user-guide/141520.pdf
+
+### AVRDUDE - AVR Downloader Uploader
+- https://github.com/avrdudes/avrdude
