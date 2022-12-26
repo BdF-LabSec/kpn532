@@ -2,7 +2,7 @@
 
 Arduino PN532 proxy (mini relay).
 
-Minimal SPI library at 4 MHz (maximum with availble divisors on the Arduino), using IRQ insted of status polling.
+Minimal SPI library at 4 MHz (maximum with available divisors on the Arduino), using IRQ instead of status polling.
 
 PN532 supports:
 - I2C standard mode (100 kHz) and fast mode (400 kHz) ;
