@@ -17,11 +17,9 @@ void setup(void) {
 
   Serial.begin(115200);
   SPI.begin();
-  SPI.setDataMode(SPI_MODE0);
-  SPI.setBitOrder(LSBFIRST);
-  SPI.setClockDivider(SPI_CLOCK_DIV4);
+  SPI.beginTransaction(SPISettings(4000000, LSBFIRST, SPI_MODE0));
 
-  bIsVerbose = IsVerbose();
+  bIsVerbose = false; //IsVerbose(); for now ;)
 
   pNFCReader = new PN532_SPI(10, 9);
   pNFCEmulator = new PN532_SPI(7, 6);
@@ -48,6 +46,7 @@ void setup(void) {
 }
 
 void loop(void) {
+
   uint8_t *pResult, cbResult, bSuccess;
   uint8_t UID[10], cbUID, SENS_RES[2], SEL_RES;
 
@@ -92,11 +91,7 @@ uint8_t IsVerbose() {
 void SetupChip(PN532_SPI *pNFC) {
   uint8_t IC, Ver, Rev, Support;
 
-  if (!pNFC->begin()) {
-    Serial.println("Not detected :(");
-    while (1)
-      ;
-  }
+  pNFC->begin();
 
   if (!pNFC->RfConfiguration(0xff)) {
     Serial.println("Bad RfConfiguration :(");
