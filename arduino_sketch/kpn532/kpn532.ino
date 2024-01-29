@@ -6,20 +6,19 @@
 #pragma GCC optimize("-Ofast")
 #include "kpn532_spi.h"
 
+#define KPN532_VERBOSE 0 // or 1, be careful, verbose slow down the relay
+
 void SetupChip(PN532_SPI *pNFC);
-uint8_t IsVerbose();
+void PrintHex(const byte *pcbData, const uint32_t cbData);
 
 PN532_SPI *pNFCReader, *pNFCEmulator;
 
 void setup(void) {
-  uint8_t bIsVerbose = 0;
   uint8_t UID[10], cbUID, SENS_RES[2], SEL_RES;
 
   Serial.begin(115200);
   SPI.begin();
   SPI.beginTransaction(SPISettings(4000000, LSBFIRST, SPI_MODE0));
-
-  bIsVerbose = false; //IsVerbose(); for now ;)
 
   pNFCReader = new PN532_SPI(10, 9);
   pNFCEmulator = new PN532_SPI(7, 6);
@@ -33,10 +32,7 @@ void setup(void) {
   Serial.println("  '#####' L\\_          Kiwi PN532                      ***/\r\n");
 
   Serial.print("| Verbosity: ");
-  Serial.println(bIsVerbose ? "full" : "minimal");
-
-  pNFCReader->setVerbose(bIsVerbose);
-  pNFCEmulator->setVerbose(bIsVerbose);
+  Serial.println(KPN532_VERBOSE ? "full" : "minimal");
 
   Serial.println("| Reader init...");
   SetupChip(pNFCReader);
@@ -67,7 +63,15 @@ void loop(void) {
         bSuccess = 0;
 
         if (pNFCEmulator->TgGetData(&pResult, &cbResult)) {
+#if KPN532_VERBOSE
+          Serial.print("< ");
+          PrintHex(pResult, cbResult);
+#endif
           if (pNFCReader->InDataExchange(pResult, cbResult, &pResult, &cbResult)) {
+#if KPN532_VERBOSE
+            Serial.print("> ");
+            PrintHex(pResult, cbResult);
+#endif
             bSuccess = pNFCEmulator->TgSetData(pResult, cbResult);
           }
         }
@@ -78,14 +82,6 @@ void loop(void) {
       }
     }
   }
-}
-
-uint8_t IsVerbose() {
-  pinMode(A4, OUTPUT);
-  pinMode(A5, INPUT_PULLUP);
-  digitalWrite(A4, LOW);
-
-  return digitalRead(A5);
 }
 
 void SetupChip(PN532_SPI *pNFC) {
@@ -115,4 +111,16 @@ void SetupChip(PN532_SPI *pNFC) {
     Serial.print(".");
     Serial.println(Support, DEC);
   }
+}
+
+void PrintHex(const byte *pcbData, const uint32_t cbData) {
+  uint32_t i;
+
+  for (i = 0; i < cbData; i++) {
+    if (pcbData[i] < 0x10) {
+      Serial.print("0");
+    }
+    Serial.print(pcbData[i] & 0xff, HEX);
+  }
+  Serial.println();
 }

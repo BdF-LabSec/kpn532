@@ -55,8 +55,6 @@
 #define PN532_CMD_TgRespondToInitiator 0x90
 #define PN532_CMD_TgGetTargetStatus 0x8a
 
-void PrintHex(const byte *pcbData, const uint32_t cbData);
-
 typedef enum _PN532_FRAME_TYPE {
   PN532_UNKNOWN = 0,
   PN532_NORMAL_INFORMATION_FRAME = 1,    // 6.2.1.1 Normal information frame
@@ -74,33 +72,24 @@ public:
 
   void begin();
 
-  void setVerbose(const uint8_t bIsVerbose) {
-    _bIsVerbose = bIsVerbose;
-  }
-  uint8_t getVerbose() {
-    return _bIsVerbose;
-  }
-
+  uint8_t RfConfiguration(uint8_t MxRtyPassiveActivation = 0xff);  // MaxRetries
+  uint8_t SAMConfiguration();
   uint8_t GetFirmwareVersion(uint8_t *pIC = NULL, uint8_t *pVer = NULL, uint8_t *pRev = NULL, uint8_t *pSupport = NULL);
   uint8_t InListPassiveTarget(uint8_t *pbUID, uint8_t cbUID, uint8_t *pcbUID, uint8_t SENS_RES[2], uint8_t *pSEL_RES);  // NFC-A, 106kbps, 1 target, ATS not here
   uint8_t InRelease();
   uint8_t InDataExchange(const uint8_t *pcbInData, const uint8_t cbInData, uint8_t **ppReceived, uint8_t *pcbReceived);
   uint8_t TgInitAsTarget(uint8_t *pbUID, uint8_t cbUID, uint8_t SENS_RES[2], uint8_t SEL_RES);
-  uint8_t TgGetData(uint8_t **ppReceived, uint8_t *pcbReceived);
+  uint8_t TgGetData(uint8_t **ppReceived, uint8_t *pcbReceived, uint8_t *pErrorCode = NULL);
   uint8_t TgSetData(const uint8_t *pcbInData, const uint8_t cbInData);
-  uint8_t RfConfiguration(uint8_t MxRtyPassiveActivation = 0xff);  // MaxRetries
-  uint8_t SAMConfiguration();
 
 private:
-  uint8_t _bIsVerbose;
   uint8_t _ss, _irq;
   uint8_t Buffer[262 + 2 + 9], cbData;
 
+  uint8_t Information_Frame_Exchange();
+  uint8_t Wait_Ready_IRQ();
   void Information_Frame_Host_To_PN532();
   PN532_FRAME_TYPE Generic_Frame_PN532_To_Host();
-  uint8_t Wait_Ready();
-  uint8_t Wait_Ready_IRQ();
-  uint8_t Information_Frame_Exchange();
 };
 
 #endif
