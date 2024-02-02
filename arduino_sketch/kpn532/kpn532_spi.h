@@ -1,12 +1,32 @@
-/*	Benjamin DELPY `gentilkiwi`
-	LabSec - DGSI DIT ARCOS
-	benjamin.delpy@banque-france.fr / benjamin@gentilkiwi.com
-	Licence : https://creativecommons.org/licenses/by/4.0/
+/* Benjamin DELPY `gentilkiwi`
+   LabSec - DGSI DIT ARCOS
+   benjamin.delpy@banque-france.fr / benjamin@gentilkiwi.com
+   Licence : https://creativecommons.org/licenses/by/4.0/
 */
 #ifndef _KPN532_SPI_H_INCLUDED
 #define _KPN532_SPI_H_INCLUDED
 
 #include <SPI.h>
+
+/* A little note about SPI speed on NXP PN532:
+
+   SPI maximum speed is officially @ 5 MHz (PN532_C1 - 8.3.5)
+   **BUT**, in reality, [BYTE - with clock] + [interbytes - without clock] is sensitive
+   All considered the clock must be around 3.5 MHz
+   
+   - As ARDUINO R3 has a little time interbytes, it can go to 4 MHz (maybe more, but limited by divider)
+     - TgInitAsTarget (48 bytes): 134.2 µs
+   - As ARDUINO R4 is more optimized, less interbytes time, we must go to 3 MHz
+     - TgInitAsTarget (48 bytes): 141.4 µs - ironically, it can be interesting to add a few ns delay between bytes to go to 4 MHz...
+*/
+
+#if defined(ARDUINO_AVR_UNO)
+#define PN532_SPI_SPEED 4000000
+#elif defined(ARDUINO_UNOR4_MINIMA)
+#define PN532_SPI_SPEED 3000000
+#else
+#error Platform not tested or supported
+#endif
 
 #define PN532_INTERFRAME_DELAY_US 10
 
@@ -65,12 +85,15 @@ typedef enum _PN532_FRAME_TYPE {
 } PN532_FRAME_TYPE,
   *PPN532_FRAME_TYPE;
 
+typedef void (*PISR_PN532_SPI_ROUTINE)();
+
 class PN532_SPI {
 public:
-  PN532_SPI(const uint8_t ss_pin, const uint8_t irq_pin);  // Only IRQ
+  PN532_SPI(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_SPI_ROUTINE Routine);  // Only IRQ
   ~PN532_SPI();
 
   void begin();
+  volatile uint8_t IrqState;
 
   uint8_t RfConfiguration(uint8_t MxRtyPassiveActivation = 0xff);  // MaxRetries
   uint8_t SAMConfiguration();

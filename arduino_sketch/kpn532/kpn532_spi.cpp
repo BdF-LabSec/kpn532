@@ -1,3 +1,4 @@
+#include "Arduino.h"
 /*	Benjamin DELPY `gentilkiwi`
 	LabSec - DGSI DIT ARCOS
 	benjamin.delpy@banque-france.fr / benjamin@gentilkiwi.com
@@ -11,12 +12,14 @@ const uint8_t PN532_NACK[] = { 0x00, 0x00, 0xff, 0xff, 0x00, 0x00 };
 #define PACKET_DATA_IN (this->Buffer + 7)
 #define PACKET_DATA_OUT (this->Buffer + 8)
 
-PN532_SPI::PN532_SPI(const uint8_t ss_pin, const uint8_t irq_pin)
-  : _ss(ss_pin), _irq(irq_pin) {
+PN532_SPI::PN532_SPI(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_SPI_ROUTINE Routine)
+  : _ss(ss_pin), _irq(irq_pin), IrqState(HIGH) {
   pinMode(_ss, OUTPUT);
-  digitalWrite(_ss, HIGH);
+  digitalWrite(this->_ss, HIGH);
 
-  pinMode(_irq, INPUT);
+  pinMode(this->_irq, INPUT);
+
+  attachInterrupt(digitalPinToInterrupt(this->_irq), Routine, FALLING);
 }
 
 PN532_SPI::~PN532_SPI() {
@@ -263,8 +266,9 @@ uint8_t PN532_SPI::Information_Frame_Exchange() {
 }
 
 uint8_t PN532_SPI::Wait_Ready_IRQ() {
-  while (digitalRead(_irq) == HIGH)  // not really real IRQ, but as we wait with nothing in // ...
+  while (this->IrqState != LOW)
     ;
+  this->IrqState = HIGH;
 
   return 1;
 }
@@ -290,6 +294,8 @@ void PN532_SPI::Information_Frame_Host_To_PN532() {
     digitalWrite(_ss, LOW);
     SPI.transfer(this->Buffer, 7 + this->cbData + 1 + 1);
     digitalWrite(_ss, HIGH);
+
+    this->IrqState = HIGH;
   }
 }
 

@@ -6,22 +6,30 @@
 #pragma GCC optimize("-Ofast")
 #include "kpn532_spi.h"
 
-#define KPN532_VERBOSE 0 // or 1, be careful, verbose slow down the relay
+#define KPN532_VERBOSE 0  // or 1, be careful, verbose slow down the relay
 
 void SetupChip(PN532_SPI *pNFC);
 void PrintHex(const byte *pcbData, const uint32_t cbData);
 
 PN532_SPI *pNFCReader, *pNFCEmulator;
 
+void ISR_NFCReader() {
+  pNFCReader->IrqState = 0;
+}
+
+void ISR_NFCEmulator() {
+  pNFCEmulator->IrqState = 0;
+}
+
 void setup(void) {
   uint8_t UID[10], cbUID, SENS_RES[2], SEL_RES;
 
   Serial.begin(115200);
   SPI.begin();
-  SPI.beginTransaction(SPISettings(4000000, LSBFIRST, SPI_MODE0));
+  SPI.beginTransaction(SPISettings(PN532_SPI_SPEED, LSBFIRST, SPI_MODE0));  // we start it globally because we do not use SPI for other operations
 
-  pNFCReader = new PN532_SPI(10, 9);
-  pNFCEmulator = new PN532_SPI(7, 6);
+  pNFCReader = new PN532_SPI(10, 3, ISR_NFCReader);
+  pNFCEmulator = new PN532_SPI(9, 2, ISR_NFCEmulator);
 
   Serial.println();
   Serial.println("  .#####.         mimicard 0.1 (Arduino - single board)");
