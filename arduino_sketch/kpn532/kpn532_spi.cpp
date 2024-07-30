@@ -1,11 +1,9 @@
-#include "Arduino.h"
-/*	Benjamin DELPY `gentilkiwi`
-	LabSec - DGSI DIT ARCOS
-	benjamin.delpy@banque-france.fr / benjamin@gentilkiwi.com
-	Licence : https://creativecommons.org/licenses/by/4.0/
+/* Benjamin DELPY `gentilkiwi`
+   LabSec - DGSI DIT ARCOS
+   benjamin.delpy@banque-france.fr / benjamin@gentilkiwi.com
+   Licence : https://creativecommons.org/licenses/by/4.0/
 */
 #include "kpn532_spi.h"
-
 const uint8_t PN532_ACK[] = { 0x00, 0x00, 0xff, 0x00, 0xff, 0x00 };
 const uint8_t PN532_NACK[] = { 0x00, 0x00, 0xff, 0xff, 0x00, 0x00 };
 
@@ -23,10 +21,14 @@ PN532_SPI::PN532_SPI(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_SPI
 }
 
 PN532_SPI::~PN532_SPI() {
+  detachInterrupt(digitalPinToInterrupt(this->_irq));
 }
 
 void PN532_SPI::begin() {
   uint8_t status;
+#if (KPN532_OUTPUT_LEVEL >= KPN532_OUTPUT_LEVEL_INFO)
+  uint8_t IC, Ver, Rev, Support;
+#endif
 
   while (true) {
     digitalWrite(this->_ss, LOW);
@@ -47,29 +49,35 @@ void PN532_SPI::begin() {
     }
     // TODO add delay interframe?
   }
+
+  if (!SAMConfiguration(0x01)) {
+#if (KPN532_OUTPUT_LEVEL >= KPN532_OUTPUT_LEVEL_ERROR)
+    Serial.println("Bad SAMConfiguration :(");
+#endif
+    while (1)
+      ;
+  }
+
+#if (KPN532_OUTPUT_LEVEL >= KPN532_OUTPUT_LEVEL_INFO)
+  if (GetFirmwareVersion(&IC, &Ver, &Rev, &Support)) {
+    Serial.print("|   PN5");
+    Serial.print(IC, HEX);
+    Serial.print(" version ");
+    Serial.print(Ver, DEC);
+    Serial.print(".");
+    Serial.print(Rev, DEC);
+    Serial.print(".");
+    Serial.println(Support, DEC);
+  }
+
+  if (ReadRegister(PN53X_REG_CIU_Version, &Ver)) {
+    Serial.print("|   CIU Version 0x");
+    Serial.println(Ver, HEX);
+  }
+#endif
 }
 
-uint8_t PN532_SPI::RfConfiguration(uint8_t MxRtyPassiveActivation)  // MaxRetries
-{
-  PACKET_DATA_IN[0] = PN532_CMD_RFConfiguration;
-  PACKET_DATA_IN[1] = 0x05;
-  PACKET_DATA_IN[2] = 0xff;
-  PACKET_DATA_IN[3] = 0x01;
-  PACKET_DATA_IN[4] = MxRtyPassiveActivation;
-  this->cbData = 5;
-
-  return Information_Frame_Exchange();
-}
-
-uint8_t PN532_SPI::SAMConfiguration() {
-  PACKET_DATA_IN[0] = PN532_CMD_SAMConfiguration;
-  PACKET_DATA_IN[1] = 0x01;
-  PACKET_DATA_IN[2] = 0x00;
-  PACKET_DATA_IN[3] = 0x01;
-  this->cbData = 4;
-
-  return Information_Frame_Exchange();
-}
+// Miscellaneous
 
 uint8_t PN532_SPI::GetFirmwareVersion(uint8_t *pIC, uint8_t *pVer, uint8_t *pRev, uint8_t *pSupport) {
   uint8_t ret = 0;
@@ -100,6 +108,92 @@ uint8_t PN532_SPI::GetFirmwareVersion(uint8_t *pIC, uint8_t *pVer, uint8_t *pRev
 
   return ret;
 }
+
+uint8_t PN532_SPI::ReadRegister(uint16_t Register, uint8_t *pValue) {
+  uint8_t ret = 0;
+
+  PACKET_DATA_IN[0] = PN532_CMD_ReadRegister;
+  *(uint16_t *)(PACKET_DATA_IN + 1) = __bswap_16(Register);
+  this->cbData = 3;
+
+  if (Information_Frame_Exchange() && (this->cbData == 1)) {
+    *pValue = PACKET_DATA_OUT[0];
+    ret = 1;
+  }
+
+  return ret;
+}
+
+uint8_t PN532_SPI::WriteRegister(uint16_t Register, uint8_t Value) {
+  PACKET_DATA_IN[0] = PN532_CMD_WriteRegister;
+  *(uint16_t *)(PACKET_DATA_IN + 1) = __bswap_16(Register);
+  PACKET_DATA_IN[3] = Value;
+  this->cbData = 4;
+
+  return Information_Frame_Exchange();
+}
+
+uint8_t PN532_SPI::WriteRegister(const PN53X_REGISTER_VALUE *pRV, uint8_t szData) {
+  PACKET_DATA_IN[0] = PN532_CMD_WriteRegister;
+  memcpy(PACKET_DATA_IN + 1, pRV, szData);
+  this->cbData = 1 + szData;
+
+  return Information_Frame_Exchange();
+}
+
+uint8_t PN532_SPI::SAMConfiguration(uint8_t IRQ) {
+  PACKET_DATA_IN[0] = PN532_CMD_SAMConfiguration;
+  PACKET_DATA_IN[1] = 0x01;
+  PACKET_DATA_IN[2] = 0x00;
+  PACKET_DATA_IN[3] = IRQ;
+  this->cbData = 4;
+
+  return Information_Frame_Exchange();
+}
+
+// RFcommunication
+
+uint8_t PN532_SPI::RfConfiguration__RF_field(uint8_t ConfigurationData) {
+  PACKET_DATA_IN[0] = PN532_CMD_RFConfiguration;
+  PACKET_DATA_IN[1] = 0x01;
+  PACKET_DATA_IN[2] = ConfigurationData;
+  this->cbData = 3;
+
+  return Information_Frame_Exchange();
+}
+
+uint8_t PN532_SPI::RfConfiguration__Various_timings(uint8_t fATR_RES_Timeout, uint8_t fRetryTimeout) {
+  PACKET_DATA_IN[0] = PN532_CMD_RFConfiguration;
+  PACKET_DATA_IN[1] = 0x02;
+  PACKET_DATA_IN[2] = 0x00;  // RFU
+  PACKET_DATA_IN[3] = fATR_RES_Timeout;
+  PACKET_DATA_IN[4] = fRetryTimeout;
+  this->cbData = 5;
+
+  return Information_Frame_Exchange();
+}
+
+uint8_t PN532_SPI::RfConfiguration__MaxRtyCOM(uint8_t MaxRtyCOM) {
+  PACKET_DATA_IN[0] = PN532_CMD_RFConfiguration;
+  PACKET_DATA_IN[1] = 0x04;
+  PACKET_DATA_IN[2] = MaxRtyCOM;
+  this->cbData = 3;
+
+  return Information_Frame_Exchange();
+}
+
+uint8_t PN532_SPI::RfConfiguration__MaxRetries(uint8_t MxRtyPassiveActivation) {
+  PACKET_DATA_IN[0] = PN532_CMD_RFConfiguration;
+  PACKET_DATA_IN[1] = 0x05;
+  PACKET_DATA_IN[2] = 0xff;
+  PACKET_DATA_IN[3] = 0x01;
+  PACKET_DATA_IN[4] = MxRtyPassiveActivation;
+  this->cbData = 5;
+
+  return Information_Frame_Exchange();
+}
+
+// Initiator
 
 uint8_t PN532_SPI::InListPassiveTarget(uint8_t *pbUID, uint8_t cbUID, uint8_t *pcbUID, uint8_t SENS_RES[2], uint8_t *pSEL_RES)  // NFC-A, 106kbps, 1 target, ATS not here
 {
@@ -133,47 +227,90 @@ uint8_t PN532_SPI::InListPassiveTarget(uint8_t *pbUID, uint8_t cbUID, uint8_t *p
   return ret;
 }
 
-uint8_t PN532_SPI::InRelease() {
-  uint8_t ret = 0;
-
-  PACKET_DATA_IN[0] = PN532_CMD_InRelease;
-  PACKET_DATA_IN[1] = 0x00;
-  this->cbData = 2;
-
-  if (Information_Frame_Exchange() && this->cbData) {
-    ret = !(PACKET_DATA_OUT[0] & 0x3f);
-  }
-
-  return ret;
-}
-
-uint8_t PN532_SPI::InDataExchange(const uint8_t *pcbInData, const uint8_t cbInData, uint8_t **ppReceived, uint8_t *pcbReceived) {
-  uint8_t ret = 0;
+uint8_t PN532_SPI::InDataExchange(const uint8_t *pcbInData, const uint8_t cbInData, uint8_t **ppReceived, uint8_t *pcbReceived, uint8_t *pErrorCode) {
+  uint8_t ret = 0, errorCode;
 
   PACKET_DATA_IN[0] = PN532_CMD_InDataExchange;
   PACKET_DATA_IN[1] = 0x01;
   memcpy(PACKET_DATA_IN + 2, pcbInData, cbInData);
   this->cbData = 2 + cbInData;
 
-  if (Information_Frame_Exchange() && this->cbData) {
-    if (!(PACKET_DATA_OUT[0] & 0x3f)) {
-      *ppReceived = PACKET_DATA_OUT + 1;
-      *pcbReceived = this->cbData - 1;
-
-      ret = 1;
+  if (ppReceived && pcbReceived) {
+    if (Information_Frame_Exchange() && this->cbData) {
+      errorCode = PACKET_DATA_OUT[0] & 0x3f;
+      if (!errorCode) {
+        *ppReceived = PACKET_DATA_OUT + 1;
+        *pcbReceived = this->cbData - 1;
+        ret = 1;
+      } else if (pErrorCode) {
+        *pErrorCode = errorCode;
+      }
     }
-  }
 
-  if (!ret) {
-    *ppReceived = NULL;
-    *pcbReceived = 0;
+    if (!ret) {
+      *ppReceived = NULL;
+      *pcbReceived = 0;
+    }
+  } else {
+    ret = Information_Frame_Exchange(0x01);
   }
 
   return ret;
 }
 
+uint8_t PN532_SPI::InCommunicateThru(const uint8_t *pcbInData, const uint8_t cbInData, uint8_t **ppReceived, uint8_t *pcbReceived, uint8_t *pErrorCode) {
+  uint8_t ret = 0, errorCode;
+
+  PACKET_DATA_IN[0] = PN532_CMD_InCommunicateThru;
+  memcpy(PACKET_DATA_IN + 1, pcbInData, cbInData);
+  this->cbData = 1 + cbInData;
+
+  if (ppReceived && pcbReceived) {
+    if (Information_Frame_Exchange() && this->cbData) {
+      errorCode = PACKET_DATA_OUT[0] & 0x3f;
+      if (!errorCode) {
+        *ppReceived = PACKET_DATA_OUT + 1;
+        *pcbReceived = this->cbData - 1;
+        ret = 1;
+      } else if (pErrorCode) {
+        *pErrorCode = errorCode;
+      }
+    }
+
+    if (!ret) {
+      *ppReceived = NULL;
+      *pcbReceived = 0;
+    }
+  } else {
+    ret = Information_Frame_Exchange(0x01);
+  }
+
+  return ret;
+}
+
+uint8_t PN532_SPI::InRelease(uint8_t *pErrorCode) {
+  uint8_t ret = 0, errorCode;
+
+  PACKET_DATA_IN[0] = PN532_CMD_InRelease;
+  PACKET_DATA_IN[1] = 0x00;
+  this->cbData = 2;
+
+  if (Information_Frame_Exchange() && this->cbData) {
+    errorCode = PACKET_DATA_OUT[0] & 0x3f;
+    if (!errorCode) {
+      ret = 1;
+    } else if (pErrorCode) {
+      *pErrorCode = errorCode;
+    }
+  }
+
+  return ret;
+}
+
+// Target
+
 uint8_t PN532_SPI::TgInitAsTarget(uint8_t *pbUID, uint8_t cbUID, uint8_t SENS_RES[2], uint8_t SEL_RES) {
-  uint8_t ret = 0;
+  uint8_t ret = 0, mode;
 
   if (cbUID >= 4) {
     PACKET_DATA_IN[0] = PN532_CMD_TgInitAsTarget;
@@ -191,7 +328,8 @@ uint8_t PN532_SPI::TgInitAsTarget(uint8_t *pbUID, uint8_t cbUID, uint8_t SENS_RE
     this->cbData = 39;
 
     if (Information_Frame_Exchange() && this->cbData) {
-      if ((PACKET_DATA_OUT[0] & 0x78) == 0x08) {
+      mode = PACKET_DATA_OUT[0] & 0x7f;
+      if ((mode & 0x78) == 0x08) {
         ret = 1;
       }
     }
@@ -211,14 +349,9 @@ uint8_t PN532_SPI::TgGetData(uint8_t **ppReceived, uint8_t *pcbReceived, uint8_t
     if (!errorCode) {
       *ppReceived = PACKET_DATA_OUT + 1;
       *pcbReceived = this->cbData - 1;
-
       ret = 1;
-    } else {
-      if (pErrorCode) {
-        *pErrorCode = errorCode;
-      }
-
-      ret = 0;
+    } else if (pErrorCode) {
+      *pErrorCode = errorCode;
     }
   }
 
@@ -230,33 +363,88 @@ uint8_t PN532_SPI::TgGetData(uint8_t **ppReceived, uint8_t *pcbReceived, uint8_t
   return ret;
 }
 
-uint8_t PN532_SPI::TgSetData(const uint8_t *pcbInData, const uint8_t cbInData) {
-  uint8_t ret = 0;
+uint8_t PN532_SPI::TgSetData(const uint8_t *pcbInData, const uint8_t cbInData, uint8_t *pErrorCode) {
+  uint8_t ret = 0, errorCode;
 
   PACKET_DATA_IN[0] = PN532_CMD_TgSetData;
   memcpy(PACKET_DATA_IN + 1, pcbInData, cbInData);
   this->cbData = 1 + cbInData;
 
   if (Information_Frame_Exchange() && this->cbData) {
-    if (!(PACKET_DATA_OUT[0] & 0x3f)) {
+    errorCode = PACKET_DATA_OUT[0] & 0x3f;
+    if (!errorCode) {
       ret = 1;
+    } else if (pErrorCode) {
+      *pErrorCode = errorCode;
     }
   }
 
   return ret;
 }
 
-uint8_t PN532_SPI::Information_Frame_Exchange() {
+uint8_t PN532_SPI::TgGetInitiatorCommand(uint8_t **ppReceived, uint8_t *pcbReceived, uint8_t *pErrorCode) {
+  uint8_t ret = 0, errorCode;
+
+  PACKET_DATA_IN[0] = PN532_CMD_TgGetInitiatorCommand;
+  this->cbData = 1;
+
+  if (Information_Frame_Exchange() && this->cbData) {
+    errorCode = PACKET_DATA_OUT[0] & 0x3f;
+    if (!errorCode) {
+      *ppReceived = PACKET_DATA_OUT + 1;
+      *pcbReceived = this->cbData - 1;
+      ret = 1;
+    } else if (pErrorCode) {
+      *pErrorCode = errorCode;
+    }
+  }
+
+  if (!ret) {
+    *ppReceived = NULL;
+    *pcbReceived = 0;
+  }
+
+  return ret;
+}
+
+uint8_t PN532_SPI::TgResponseToInitiator(const uint8_t *pcbInData, const uint8_t cbInData, uint8_t *pErrorCode) {
+  uint8_t ret = 0, errorCode;
+
+  PACKET_DATA_IN[0] = PN532_CMD_TgRespondToInitiator;
+  memcpy(PACKET_DATA_IN + 1, pcbInData, cbInData);
+  this->cbData = 1 + cbInData;
+
+  if (Information_Frame_Exchange() && this->cbData) {
+    errorCode = PACKET_DATA_OUT[0] & 0x3f;
+    if (!errorCode) {
+      ret = 1;
+    } else if (pErrorCode) {
+      *pErrorCode = errorCode;
+    }
+  }
+
+  return ret;
+}
+
+uint8_t PN532_SPI::Information_Frame_Exchange(uint8_t bNoAnswer) {
   uint8_t ret = 0, cmd = PACKET_DATA_IN[0] + 1;
 
   Information_Frame_Host_To_PN532();
   if (Wait_Ready_IRQ()) {
     if (Generic_Frame_PN532_To_Host() == PN532_ACK_FRAME) {
-      if (Wait_Ready_IRQ()) {
-        if (Generic_Frame_PN532_To_Host() == PN532_NORMAL_INFORMATION_FRAME) {
-          if (cmd == PACKET_DATA_OUT[-1]) {
-            this->cbData = PACKET_DATA_OUT[-4] - 2;
-            ret = 1;
+      if (bNoAnswer) {
+        memcpy(this->Buffer, PN532_ACK, sizeof(PN532_ACK));
+        digitalWrite(this->_ss, LOW);
+        SPI.transfer(this->Buffer, sizeof(PN532_ACK));
+        digitalWrite(this->_ss, HIGH);
+        ret = 1;
+      } else {
+        if (Wait_Ready_IRQ()) {
+          if (Generic_Frame_PN532_To_Host() == PN532_NORMAL_INFORMATION_FRAME) {
+            if (cmd == PACKET_DATA_OUT[-1]) {
+              this->cbData = PACKET_DATA_OUT[-4] - 2;
+              ret = 1;
+            }
           }
         }
       }
@@ -338,4 +526,21 @@ PN532_FRAME_TYPE PN532_SPI::Generic_Frame_PN532_To_Host() {
   digitalWrite(_ss, HIGH);
 
   return ret;
+}
+
+void PN532_SPI::InitGlobalSPI() {
+  SPI.begin();
+  SPI.beginTransaction(SPISettings(PN532_SPI_SPEED, LSBFIRST, SPI_MODE0));  // we start it globally because we do not use SPI for other operations
+}
+
+void PN532_SPI::PrintHex(const byte *pcbData, const size_t cbData) {
+  size_t i;
+
+  for (i = 0; i < cbData; i++) {
+    if (pcbData[i] < 0x10) {
+      Serial.print("0");
+    }
+    Serial.print(pcbData[i] & 0xff, HEX);
+  }
+  Serial.println();
 }
