@@ -3,14 +3,14 @@
 ## Kiwi PN532 SPI library for Arduino
 
 This is a minimal and efficient SPI library using IRQ instead of status polling, compatible with:
-- Arduino Uno R3 - @ 4 MHz
+- Arduino Uno R3, Arduino Leonardo - @ 4 MHz
 - Arduino Uno R4 Minima (maybe WiFi too?) - @ 3 MHz
 (see `kpn532.h` to know why this 1 MHz does not make a lots of differences)
 
 ### Updates
 - IRQ are now on pin 3 & 2 (only ones available on R3 for real IRQ)
 - No more minimal/verbose pin - use specific firmware (outputs slow down the relay)
-- `kpn532` is now a libary, `relay` is now available as an example (as `st25tb` to read one card)
+- `kpn532` is now a library, `relay` is now available as an example (as `st25tb` to read one card)
 
 ## Arduino Uno R4 vs. Elechouse PN532 boards
 _Or why to start with a Uno R3..._
@@ -104,6 +104,8 @@ Resetting USB to switch back to Run-Time mode
 After many tests, many wires, many problems, many probes, etc... I created a minimal shield to experiment `PN532` relaying with - not expensive - Elechouse PN532 boards. But it can also be used to help only one PN532 board with the level shifter.
 ![Picture kpn532 board PCB 3D representation](extras/kpn532_board_3d.png)
 Schematic is very simple, you can find the project at: https://oshwlab.com/gentilkiwi/arduino_uno_relay_board
+
+Arduino Uno Relay board is designed for `Uno` boards, as it is working with 5V logical level and SPI pins (SCK/MOSI/MISO) are available on standard connector (not like `Leonardo` boards).
 
 ## Pictures
 

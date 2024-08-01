@@ -20,7 +20,7 @@
      - TgInitAsTarget (48 bytes): 141.4 µs - ironically, it can be interesting to add a few ns delay between bytes to go to 4 MHz...
 */
 
-#if defined(ARDUINO_AVR_UNO)
+#if defined(ARDUINO_AVR_UNO) || defined(ARDUINO_AVR_LEONARDO)
 #define PN532_SPEED 4000000
 #elif defined(ARDUINO_UNOR4_MINIMA)
 #define PN532_SPEED 3000000

@@ -512,7 +512,7 @@ PN532_FRAME_TYPE PN532::Generic_Frame_PN532_To_Host() {
           DCS += this->Buffer[6 + i];
         }
 
-        if (this->Buffer[6 + cbDataIn] == (uint8_t)~DCS + 1) {
+        if (this->Buffer[6 + cbDataIn] == (uint8_t)(~DCS + 1)) {
           if (this->Buffer[6] == PN532_TFI_PN532_to_Host) {
             ret = PN532_NORMAL_INFORMATION_FRAME;
           } else if (cbDataIn == 0x01) {
