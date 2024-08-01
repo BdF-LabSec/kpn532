@@ -6,7 +6,7 @@
 #pragma GCC optimize("-Ofast")
 #include <kpn532.h>
 #define KPN532_RELAY_VERBOSE 0  // or 1, be careful, verbose slow down the relay
-#define KPN532_RELAY_RAW 0      // 0 = TgGetData, InDataExchange, TgSetData (WTX, slower, overall faster because ISO/DEP and no real deslect/hlt), 1 = TgGetInitiatorCommand, InCommunicateThru, TgResponseToInitiator (no WTX, faster, overall slower because of real deselect/hlt),
+#define KPN532_RELAY_RAW 0      // 0 = TgGetData, InDataExchange, TgSetData (WTX, slower, overall faster because ISO/DEP and no real deselect/hlt), 1 = TgGetInitiatorCommand, InCommunicateThru, TgResponseToInitiator (no WTX, faster, overall slower because of real deselect/hlt),
 
 PN532 *pNFCReader, *pNFCEmulator;
 
