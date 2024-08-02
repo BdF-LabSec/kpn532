@@ -28,7 +28,7 @@
 #error Platform not tested or supported
 #endif
 
-#define __bswap_16(x) (((x) >> 8) | ((x) << 8))
+#define __bswap_16(x) ((((x) >> 8) & 0xff) | (((x) & 0xff) << 8))
 
 #define PN532_INTERFRAME_DELAY_US 10
 
@@ -51,6 +51,7 @@ typedef enum _PN532_FRAME_TYPE {
 } PN532_FRAME_TYPE,
   *PPN532_FRAME_TYPE;
 
+#pragma pack(push)
 #pragma pack(1)
 typedef struct _PN53X_REGISTER_VALUE {
   uint16_t Register;

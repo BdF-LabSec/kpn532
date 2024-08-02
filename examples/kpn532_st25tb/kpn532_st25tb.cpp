@@ -40,7 +40,7 @@ uint8_t ST25TB::Initiate(uint8_t *pui8ChipId, uint8_t force) {
   do {
     if (pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Initiate_data, sizeof(ST25TB_Initiator_CMD_Initiate_data), &pReceived, &cbReceived)) {
       if (cbReceived == 1) {
-        this->ui8ChipId = *pReceived;
+        ui8ChipId = *pReceived;
         if (pui8ChipId) {
           *pui8ChipId = *pReceived;
         }
@@ -74,7 +74,7 @@ uint8_t ST25TB::Select(const uint8_t ui8ChipId) {
 }
 
 uint8_t ST25TB::Select() {
-  return Select(this->ui8ChipId);
+  return Select(ui8ChipId);
 }
 
 const uint8_t ST25TB_Initiator_CMD_Get_Uid_data[] = { ST25TB_CMD_GET_UID };
@@ -82,9 +82,9 @@ uint8_t ST25TB::Get_Uid(uint8_t pui8Data[8]) {
   uint8_t ret = 0;
   uint8_t *pReceived, cbReceived;
 
-  this->pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~5 ms
+  pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~5 ms
 
-  if (this->pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Get_Uid_data, sizeof(ST25TB_Initiator_CMD_Get_Uid_data), &pReceived, &cbReceived)) {
+  if (pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Get_Uid_data, sizeof(ST25TB_Initiator_CMD_Get_Uid_data), &pReceived, &cbReceived)) {
     if (cbReceived == sizeof(uint64_t)) {
       *(uint64_t *)pui8Data = *(uint64_t *)pReceived;
       ret = 1;
@@ -96,20 +96,16 @@ uint8_t ST25TB::Get_Uid(uint8_t pui8Data[8]) {
 
 const uint8_t ST25TB_Initiator_CMD_Completion_data[] = { ST25TB_CMD_COMPLETION };
 uint8_t ST25TB::Completion() {
-  uint8_t ret = 0;
-
-  this->pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Completion_data, sizeof(ST25TB_Initiator_CMD_Completion_data));
-
-  return 1;
+  return pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Completion_data, sizeof(ST25TB_Initiator_CMD_Completion_data));
 }
 
 uint8_t ST25TB::Read_Block(const uint8_t ui8BlockIdx, uint8_t pui8Data[4]) {
   uint8_t ret = 0, ST25TB_Initiator_CMD_Read_Block_data[] = { ST25TB_CMD_READ_BLOCK, ui8BlockIdx };
   uint8_t *pReceived, cbReceived;
 
-  this->pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~5 ms
+  pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~5 ms
 
-  if (this->pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Read_Block_data, sizeof(ST25TB_Initiator_CMD_Read_Block_data), &pReceived, &cbReceived)) {
+  if (pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Read_Block_data, sizeof(ST25TB_Initiator_CMD_Read_Block_data), &pReceived, &cbReceived)) {
     if (cbReceived == sizeof(uint32_t)) {
       *(uint32_t *)pui8Data = *(uint32_t *)pReceived;
       ret = 1;

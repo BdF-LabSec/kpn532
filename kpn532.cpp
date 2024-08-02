@@ -11,7 +11,7 @@ const uint8_t PN532_NACK[] = { 0x00, 0x00, 0xff, 0xff, 0x00, 0x00 };
 #define PACKET_DATA_OUT (this->Buffer + 8)
 
 PN532::PN532(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine)
-  : _ss(ss_pin), _irq(irq_pin), IrqState(HIGH) {
+  : IrqState(HIGH), _ss(ss_pin), _irq(irq_pin) {
   pinMode(_ss, OUTPUT);
   digitalWrite(this->_ss, HIGH);
 

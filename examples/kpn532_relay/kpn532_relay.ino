@@ -19,8 +19,6 @@ void ISR_NFCEmulator() {
 }
 
 void setup(void) {
-  uint8_t UID[10], cbUID, SENS_RES[2], SEL_RES;
-
   Serial.begin(115200);
   PN532::InitGlobalSPI();
 
@@ -61,7 +59,7 @@ void setup(void) {
 void loop(void) {
 
   uint8_t *pResult, cbResult, bSuccess;
-  uint8_t UID[10], cbUID, SENS_RES[2], SEL_RES;
+  uint8_t UID[10], cbUID = 0, SENS_RES[2], SEL_RES;
 
   Serial.println("~ Waiting for target...");
   if (pNFCReader->InListPassiveTarget(UID, sizeof(UID), &cbUID, SENS_RES, &SEL_RES)) {
