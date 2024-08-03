@@ -113,7 +113,7 @@ uint8_t PN532::ReadRegister(uint16_t Register, uint8_t *pValue) {
   uint8_t ret = 0;
 
   PACKET_DATA_IN[0] = PN532_CMD_ReadRegister;
-  *(uint16_t *)(PACKET_DATA_IN + 1) = __bswap_16(Register);
+  *(uint16_t *)(PACKET_DATA_IN + 1) = __builtin_bswap16(Register);
   this->cbData = 3;
 
   if (Information_Frame_Exchange() && (this->cbData == 1)) {
@@ -126,7 +126,7 @@ uint8_t PN532::ReadRegister(uint16_t Register, uint8_t *pValue) {
 
 uint8_t PN532::WriteRegister(uint16_t Register, uint8_t Value) {
   PACKET_DATA_IN[0] = PN532_CMD_WriteRegister;
-  *(uint16_t *)(PACKET_DATA_IN + 1) = __bswap_16(Register);
+  *(uint16_t *)(PACKET_DATA_IN + 1) = __builtin_bswap16(Register);
   PACKET_DATA_IN[3] = Value;
   this->cbData = 4;
 

@@ -14,11 +14,11 @@ ST25TB::~ST25TB() {
 }
 
 const PN53X_REGISTER_VALUE Registers_B_SR_ST25TB[] = {
-  { __bswap_16(PN53X_REG_CIU_Control), 0x10 },  // 0x10 = Initiator
-  { __bswap_16(PN53X_REG_CIU_TxMode), 0x83 },   // 0x80 = TxCRCEn, 106 kbit/s, 0x03 = ISO/IEC 14443B
-  { __bswap_16(PN53X_REG_CIU_RxMode), 0x83 },   // 0x80 = RxCRCEn, 106 kbit/s, 0x03 = ISO/IEC 14443B
-  { __bswap_16(PN53X_REG_CIU_CWGsP), 0x3f },    // conductance of the output P-driver during times of no modulation = 0x3f - MAX
-  { __bswap_16(PN53X_REG_CIU_ModGsP), 0x12 },   // conductance of the output P-driver for the time of modulation = 0x12 - (0x3f & 0x12 ~= MOD_ASK_10)
+  { __builtin_bswap16(PN53X_REG_CIU_Control), 0x10 },  // 0x10 = Initiator
+  { __builtin_bswap16(PN53X_REG_CIU_TxMode), 0x83 },   // 0x80 = TxCRCEn, 106 kbit/s, 0x03 = ISO/IEC 14443B
+  { __builtin_bswap16(PN53X_REG_CIU_RxMode), 0x83 },   // 0x80 = RxCRCEn, 106 kbit/s, 0x03 = ISO/IEC 14443B
+  { __builtin_bswap16(PN53X_REG_CIU_CWGsP), 0x3f },    // conductance of the output P-driver during times of no modulation = 0x3f - MAX
+  { __builtin_bswap16(PN53X_REG_CIU_ModGsP), 0x12 },   // conductance of the output P-driver for the time of modulation = 0x12 - (0x3f & 0x12 ~= MOD_ASK_10)
 };
 
 void ST25TB::begin() {

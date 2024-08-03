@@ -28,8 +28,6 @@
 #error Platform not tested or supported
 #endif
 
-#define __bswap_16(x) ((((x) >> 8) & 0xff) | (((x) & 0xff) << 8))
-
 #define PN532_INTERFRAME_DELAY_US 10
 
 #define PN532_T_osc_start 2  // in ms, see 7.2.11 PowerDown (SPI)
