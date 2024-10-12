@@ -5,7 +5,8 @@
 */
 #include "kpn532_st25tb.h"
 
-ST25TB::ST25TB(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine) {
+ST25TB::ST25TB(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine)
+  : bIsRfOn(0x00) {
   pNFC = new PN532(ss_pin, irq_pin, Routine);
 }
 
@@ -24,6 +25,13 @@ const PN53X_REGISTER_VALUE Registers_B_SR_ST25TB[] = {
 void ST25TB::begin() {
   pNFC->begin();
   pNFC->WriteRegister(Registers_B_SR_ST25TB, sizeof(Registers_B_SR_ST25TB));
+}
+
+void ST25TB::RF(const uint8_t bIsOn) {
+  if (bIsOn != bIsRfOn) {
+    pNFC->RfConfiguration__RF_field(bIsOn);
+    bIsRfOn = bIsOn;
+  }
 }
 
 const uint8_t ST25TB_Initiator_CMD_Initiate_data[] = { ST25TB_CMD_INITIATE, 0x00 };
@@ -79,8 +87,7 @@ uint8_t ST25TB::Select() {
 
 const uint8_t ST25TB_Initiator_CMD_Get_Uid_data[] = { ST25TB_CMD_GET_UID };
 uint8_t ST25TB::Get_Uid(uint8_t pui8Data[8]) {
-  uint8_t ret = 0;
-  uint8_t *pReceived, cbReceived;
+  uint8_t ret = 0, *pReceived, cbReceived;
 
   pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~5 ms - ST25TB_INITIATOR_TIMEOUT_GENERIC
 
@@ -96,7 +103,24 @@ uint8_t ST25TB::Get_Uid(uint8_t pui8Data[8]) {
 
 const uint8_t ST25TB_Initiator_CMD_Completion_data[] = { ST25TB_CMD_COMPLETION };
 uint8_t ST25TB::Completion() {
-  return pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Completion_data, sizeof(ST25TB_Initiator_CMD_Completion_data));
+  uint8_t ret, errorCode;
+
+  pNFC->RfConfiguration__Various_timings(0x00, 0x01);  // 100 µs
+  ret = pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Completion_data, sizeof(ST25TB_Initiator_CMD_Completion_data), NULL, NULL, &errorCode);
+  ret = (ret == 0x00) && (errorCode == 0x01);  // timeout
+
+  return ret;
+}
+
+const uint8_t ST25TB_Initiator_CMD_Reset_to_inventory_data[] = { ST25TB_CMD_RESET_TO_INVENTORY };
+uint8_t ST25TB::Reset_to_Inventory_data() {
+  uint8_t ret, errorCode;
+
+  pNFC->RfConfiguration__Various_timings(0x00, 0x01);  // 100 µs
+  ret = pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Reset_to_inventory_data, sizeof(ST25TB_Initiator_CMD_Reset_to_inventory_data), NULL, NULL, &errorCode);
+  ret = (ret == 0x00) && (errorCode == 0x01);  // timeout
+
+  return ret;
 }
 
 uint8_t ST25TB::Read_Block(const uint8_t ui8BlockIdx, uint8_t pui8Data[4]) {
@@ -104,7 +128,6 @@ uint8_t ST25TB::Read_Block(const uint8_t ui8BlockIdx, uint8_t pui8Data[4]) {
   uint8_t *pReceived, cbReceived;
 
   pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~5 ms - ST25TB_INITIATOR_TIMEOUT_GENERIC
-
   if (pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Read_Block_data, sizeof(ST25TB_Initiator_CMD_Read_Block_data), &pReceived, &cbReceived)) {
     if (cbReceived == sizeof(uint32_t)) {
       *(uint32_t *)pui8Data = *(uint32_t *)pReceived;
@@ -116,13 +139,12 @@ uint8_t ST25TB::Read_Block(const uint8_t ui8BlockIdx, uint8_t pui8Data[4]) {
 }
 
 uint8_t ST25TB::Write_Block(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]) {
-  uint8_t ret, ST25TB_Initiator_CMD_Write_Block_data[2 + 4] = { ST25TB_CMD_WRITE_BLOCK, ui8BlockIdx };
+  uint8_t ret, errorCode, ST25TB_Initiator_CMD_Write_Block_data[2 + 4] = { ST25TB_CMD_WRITE_BLOCK, ui8BlockIdx };
   *(uint32_t *)(ST25TB_Initiator_CMD_Write_Block_data + 2) = *((uint32_t *)pui8Data);
 
-  ret = pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Write_Block_data, sizeof(ST25TB_Initiator_CMD_Write_Block_data));
-  if (ret) {
-    delay(((ui8BlockIdx == ST25TB_IDX_COUNTER1) || (ui8BlockIdx == ST25TB_IDX_COUNTER2)) ? ST25TB_INITIATOR_DELAY_WRITE_TIME_COUNTER : ST25TB_INITIATOR_DELAY_WRITE_TIME_EEPROM);
-  }
+  pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~ ST25TB_INITIATOR_DELAY_WRITE_TIME_COUNTER / ST25TB_INITIATOR_DELAY_WRITE_TIME_EEPROM
+  ret = pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Write_Block_data, sizeof(ST25TB_Initiator_CMD_Write_Block_data), NULL, NULL, &errorCode);
+  ret = (ret == 0x00) && (errorCode == 0x01);  // timeout
 
   return ret;
 }
@@ -141,17 +163,16 @@ uint8_t ST25TB::Initiator_Initiate_Select_UID_C1_C2(uint8_t UID[8], uint8_t C1[4
     if (C2 && ret) {
       ret = Read_Block(ST25TB_IDX_COUNTER2, C2);
     }
-    Completion();
+    Reset_to_Inventory_data();
   }
 
   return ret;
 }
 
-uint8_t ST25TB::Initiator_CMD_Write_Block_noflush_notimer(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4])
-{
-    uint8_t ST25TB_Initiator_CMD_Write_Block_data[2 + 4] = { ST25TB_CMD_WRITE_BLOCK, ui8BlockIdx };
-    *(uint32_t *) (ST25TB_Initiator_CMD_Write_Block_data + 2) = *((uint32_t *) pui8Data);
-    return pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Write_Block_data, sizeof(ST25TB_Initiator_CMD_Write_Block_data));
+uint8_t ST25TB::Initiator_CMD_Write_Block_noflush_notimer(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]) {
+  uint8_t ST25TB_Initiator_CMD_Write_Block_data[2 + 4] = { ST25TB_CMD_WRITE_BLOCK, ui8BlockIdx };
+  *(uint32_t *)(ST25TB_Initiator_CMD_Write_Block_data + 2) = *((uint32_t *)pui8Data);
+  return pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Write_Block_data, sizeof(ST25TB_Initiator_CMD_Write_Block_data));
 }
 
 uint8_t ST25TB::Initiator_Initiate_Select_Read_Block(const uint8_t ui8BlockIdx, uint8_t pui8Data[4]) {
@@ -160,6 +181,18 @@ uint8_t ST25TB::Initiator_Initiate_Select_Read_Block(const uint8_t ui8BlockIdx, 
   if (Initiate(NULL, 0x01)) {
     if (Select()) {
       ret = Read_Block(ui8BlockIdx, pui8Data);
+    }
+  }
+
+  return ret;
+}
+
+uint8_t ST25TB::Initiator_Initiate_Select_Write_Block(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]) {
+  uint8_t ret = 0;
+
+  if (Initiate(NULL, 0x01)) {
+    if (Select()) {
+      ret = Write_Block(ui8BlockIdx, pui8Data);
     }
   }
 

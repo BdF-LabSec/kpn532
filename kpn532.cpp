@@ -4,8 +4,8 @@
    Licence : https://creativecommons.org/licenses/by/4.0/
 */
 #include "kpn532.h"
-const uint8_t PN532_ACK[] = { 0x00, 0x00, 0xff, 0x00, 0xff, 0x00 };
-const uint8_t PN532_NACK[] = { 0x00, 0x00, 0xff, 0xff, 0x00, 0x00 };
+const uint8_t PN532_ACK[] = { PN532_Data_Writing, 0x00, 0x00, 0xff, 0x00, 0xff, 0x00 };
+const uint8_t PN532_NACK[] = { PN532_Data_Writing, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00 };
 
 #define PACKET_DATA_IN (this->Buffer + 7)
 #define PACKET_DATA_OUT (this->Buffer + 8)
@@ -228,29 +228,33 @@ uint8_t PN532::InListPassiveTarget(uint8_t *pbUID, uint8_t cbUID, uint8_t *pcbUI
 }
 
 uint8_t PN532::InDataExchange(const uint8_t *pcbInData, const uint8_t cbInData, uint8_t **ppReceived, uint8_t *pcbReceived, uint8_t *pErrorCode) {
-  uint8_t ret = 0, errorCode;
+  uint8_t ret = 0, errorCode = 0;
 
   PACKET_DATA_IN[0] = PN532_CMD_InDataExchange;
   PACKET_DATA_IN[1] = 0x01;
   memcpy(PACKET_DATA_IN + 2, pcbInData, cbInData);
   this->cbData = 2 + cbInData;
 
-  if (ppReceived && pcbReceived) {
+  if (pErrorCode || (ppReceived && pcbReceived)) {
     if (Information_Frame_Exchange() && this->cbData) {
       errorCode = PACKET_DATA_OUT[0] & 0x3f;
-      if (!errorCode) {
-        *ppReceived = PACKET_DATA_OUT + 1;
-        *pcbReceived = this->cbData - 1;
-        ret = 1;
-      } else if (pErrorCode) {
-        *pErrorCode = errorCode;
+
+      if (ppReceived && pcbReceived) {
+        if (!errorCode) {
+          *ppReceived = PACKET_DATA_OUT + 1;
+          *pcbReceived = this->cbData - 1;
+          ret = 1;
+        } else {
+          *ppReceived = NULL;
+          *pcbReceived = 0;
+        }
       }
     }
 
-    if (!ret) {
-      *ppReceived = NULL;
-      *pcbReceived = 0;
+    if (pErrorCode) {
+      *pErrorCode = errorCode;
     }
+
   } else {
     ret = Information_Frame_Exchange(0x01);
   }
@@ -259,28 +263,32 @@ uint8_t PN532::InDataExchange(const uint8_t *pcbInData, const uint8_t cbInData, 
 }
 
 uint8_t PN532::InCommunicateThru(const uint8_t *pcbInData, const uint8_t cbInData, uint8_t **ppReceived, uint8_t *pcbReceived, uint8_t *pErrorCode) {
-  uint8_t ret = 0, errorCode;
+  uint8_t ret = 0, errorCode = 0;
 
   PACKET_DATA_IN[0] = PN532_CMD_InCommunicateThru;
   memcpy(PACKET_DATA_IN + 1, pcbInData, cbInData);
   this->cbData = 1 + cbInData;
 
-  if (ppReceived && pcbReceived) {
+  if (pErrorCode || (ppReceived && pcbReceived)) {
     if (Information_Frame_Exchange() && this->cbData) {
       errorCode = PACKET_DATA_OUT[0] & 0x3f;
-      if (!errorCode) {
-        *ppReceived = PACKET_DATA_OUT + 1;
-        *pcbReceived = this->cbData - 1;
-        ret = 1;
-      } else if (pErrorCode) {
-        *pErrorCode = errorCode;
+
+      if (ppReceived && pcbReceived) {
+        if (!errorCode) {
+          *ppReceived = PACKET_DATA_OUT + 1;
+          *pcbReceived = this->cbData - 1;
+          ret = 1;
+        } else {
+          *ppReceived = NULL;
+          *pcbReceived = 0;
+        }
       }
     }
 
-    if (!ret) {
-      *ppReceived = NULL;
-      *pcbReceived = 0;
+    if (pErrorCode) {
+      *pErrorCode = errorCode;
     }
+
   } else {
     ret = Information_Frame_Exchange(0x01);
   }
@@ -433,10 +441,15 @@ uint8_t PN532::Information_Frame_Exchange(uint8_t bNoAnswer) {
   if (Wait_Ready_IRQ()) {
     if (Generic_Frame_PN532_To_Host() == PN532_ACK_FRAME) {
       if (bNoAnswer) {
-        memcpy(this->Buffer, PN532_ACK, sizeof(PN532_ACK));
-        digitalWrite(this->_ss, LOW);
-        SPI.transfer(this->Buffer, sizeof(PN532_ACK));
-        digitalWrite(this->_ss, HIGH);
+        // Was testing to send ACK to avoid waiting NFC response
+        // but sending ACK (or consecutive command) is to abord the current command :(
+        // Strategy is now to use smaller timeout (100µs) and to handle it in protocol
+        // using bNoAnswer = 1 is now only for particular usage
+        //
+        // memcpy(this->Buffer, PN532_ACK, sizeof(PN532_ACK));
+        // digitalWrite(this->_ss, LOW);
+        // SPI.transfer(this->Buffer, sizeof(PN532_ACK));
+        // digitalWrite(this->_ss, HIGH);
         ret = 1;
       } else {
         if (Wait_Ready_IRQ()) {

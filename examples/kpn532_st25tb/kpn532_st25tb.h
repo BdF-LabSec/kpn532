@@ -22,36 +22,40 @@
 #define ST25TB_CMD_SELECT 0x0e
 #define ST25TB_CMD_COMPLETION 0x0f
 
-#define ST25TB_INITIATOR_TIMEOUT_INITIATE           20
-#define ST25TB_INITIATOR_TIMEOUT_SELECT             10
-#define ST25TB_INITIATOR_TIMEOUT_GENERIC            5
-#define ST25TB_INITIATOR_DELAY_BEFORE_RETRY         250
-#define ST25TB_INITIATOR_DELAY_WRITE_TIME_OTP       3
-#define ST25TB_INITIATOR_DELAY_WRITE_TIME_EEPROM    5
-#define ST25TB_INITIATOR_DELAY_WRITE_TIME_COUNTER   7
+#define ST25TB_INITIATOR_TIMEOUT_INITIATE 20
+#define ST25TB_INITIATOR_TIMEOUT_SELECT 10
+#define ST25TB_INITIATOR_TIMEOUT_GENERIC 5
+#define ST25TB_INITIATOR_DELAY_BEFORE_RETRY 250
+#define ST25TB_INITIATOR_DELAY_WRITE_TIME_OTP 3
+#define ST25TB_INITIATOR_DELAY_WRITE_TIME_EEPROM 5
+#define ST25TB_INITIATOR_DELAY_WRITE_TIME_COUNTER 7
 
 class ST25TB {
 private:
   uint8_t ui8ChipId;
+  uint8_t bIsRfOn;
   uint8_t Initiator_CMD_Write_Block_noflush_notimer(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]);
 
 public:
   PN532 *pNFC;
   void begin();
+  void RF(const uint8_t bIsOn);
 
   ST25TB(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine);  // Only IRQ
   ~ST25TB();
 
-  uint8_t Initiate(uint8_t *pui8ChipId, uint8_t force = 0x00);
+  uint8_t Initiate(uint8_t *pui8ChipId = NULL, uint8_t force = 0x00);
   uint8_t Select(const uint8_t ui8ChipId);
   uint8_t Select();
   uint8_t Get_Uid(uint8_t pui8Data[8]);
   uint8_t Completion();
+  uint8_t Reset_to_Inventory_data();
   uint8_t Read_Block(const uint8_t ui8BlockIdx, uint8_t pui8Data[4]);
   uint8_t Write_Block(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]);
 
   uint8_t Initiator_Initiate_Select_UID_C1_C2(uint8_t UID[8], uint8_t C1[4], uint8_t C2[4]);
   uint8_t Initiator_Initiate_Select_Read_Block(const uint8_t ui8BlockIdx, uint8_t pui8Data[4]);
+  uint8_t Initiator_Initiate_Select_Write_Block(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]);
   uint8_t Initiator_Initiate_Select_ultra_Write_Block(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]);
 };
 
