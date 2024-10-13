@@ -33,13 +33,10 @@
 class ST25TB {
 private:
   uint8_t ui8ChipId;
-  uint8_t bIsRfOn;
-  uint8_t Initiator_CMD_Write_Block_noflush_notimer(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]);
 
 public:
   PN532 *pNFC;
   void begin();
-  void RF(const uint8_t bIsOn);
 
   ST25TB(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine);  // Only IRQ
   ~ST25TB();
@@ -49,14 +46,13 @@ public:
   uint8_t Select();
   uint8_t Get_Uid(uint8_t pui8Data[8]);
   uint8_t Completion();
-  uint8_t Reset_to_Inventory_data();
+  uint8_t Reset_to_Inventory();
   uint8_t Read_Block(const uint8_t ui8BlockIdx, uint8_t pui8Data[4]);
   uint8_t Write_Block(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]);
 
   uint8_t Initiator_Initiate_Select_UID_C1_C2(uint8_t UID[8], uint8_t C1[4], uint8_t C2[4]);
   uint8_t Initiator_Initiate_Select_Read_Block(const uint8_t ui8BlockIdx, uint8_t pui8Data[4]);
-  uint8_t Initiator_Initiate_Select_Write_Block(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]);
-  uint8_t Initiator_Initiate_Select_ultra_Write_Block(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]);
+  uint8_t Write_Block_noflush_notimer(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]);
 };
 
 #endif

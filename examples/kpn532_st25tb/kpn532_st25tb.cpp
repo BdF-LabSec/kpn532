@@ -5,8 +5,7 @@
 */
 #include "kpn532_st25tb.h"
 
-ST25TB::ST25TB(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine)
-  : bIsRfOn(0x00) {
+ST25TB::ST25TB(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine) {
   pNFC = new PN532(ss_pin, irq_pin, Routine);
 }
 
@@ -25,13 +24,6 @@ const PN53X_REGISTER_VALUE Registers_B_SR_ST25TB[] = {
 void ST25TB::begin() {
   pNFC->begin();
   pNFC->WriteRegister(Registers_B_SR_ST25TB, sizeof(Registers_B_SR_ST25TB));
-}
-
-void ST25TB::RF(const uint8_t bIsOn) {
-  if (bIsOn != bIsRfOn) {
-    pNFC->RfConfiguration__RF_field(bIsOn);
-    bIsRfOn = bIsOn;
-  }
 }
 
 const uint8_t ST25TB_Initiator_CMD_Initiate_data[] = { ST25TB_CMD_INITIATE, 0x00 };
@@ -113,7 +105,7 @@ uint8_t ST25TB::Completion() {
 }
 
 const uint8_t ST25TB_Initiator_CMD_Reset_to_inventory_data[] = { ST25TB_CMD_RESET_TO_INVENTORY };
-uint8_t ST25TB::Reset_to_Inventory_data() {
+uint8_t ST25TB::Reset_to_Inventory() {
   uint8_t ret, errorCode;
 
   pNFC->RfConfiguration__Various_timings(0x00, 0x01);  // 100 µs
@@ -163,13 +155,12 @@ uint8_t ST25TB::Initiator_Initiate_Select_UID_C1_C2(uint8_t UID[8], uint8_t C1[4
     if (C2 && ret) {
       ret = Read_Block(ST25TB_IDX_COUNTER2, C2);
     }
-    Reset_to_Inventory_data();
   }
 
   return ret;
 }
 
-uint8_t ST25TB::Initiator_CMD_Write_Block_noflush_notimer(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]) {
+uint8_t ST25TB::Write_Block_noflush_notimer(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]) {
   uint8_t ST25TB_Initiator_CMD_Write_Block_data[2 + 4] = { ST25TB_CMD_WRITE_BLOCK, ui8BlockIdx };
   *(uint32_t *)(ST25TB_Initiator_CMD_Write_Block_data + 2) = *((uint32_t *)pui8Data);
   return pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Write_Block_data, sizeof(ST25TB_Initiator_CMD_Write_Block_data));
@@ -178,33 +169,9 @@ uint8_t ST25TB::Initiator_CMD_Write_Block_noflush_notimer(const uint8_t ui8Block
 uint8_t ST25TB::Initiator_Initiate_Select_Read_Block(const uint8_t ui8BlockIdx, uint8_t pui8Data[4]) {
   uint8_t ret = 0;
 
-  if (Initiate(NULL, 0x01)) {
+  if (Initiate()) {
     if (Select()) {
       ret = Read_Block(ui8BlockIdx, pui8Data);
-    }
-  }
-
-  return ret;
-}
-
-uint8_t ST25TB::Initiator_Initiate_Select_Write_Block(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]) {
-  uint8_t ret = 0;
-
-  if (Initiate(NULL, 0x01)) {
-    if (Select()) {
-      ret = Write_Block(ui8BlockIdx, pui8Data);
-    }
-  }
-
-  return ret;
-}
-
-uint8_t ST25TB::Initiator_Initiate_Select_ultra_Write_Block(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]) {
-  uint8_t ret = 0;
-
-  if (Initiate(NULL, 0x01)) {
-    if (Select()) {
-      ret = Initiator_CMD_Write_Block_noflush_notimer(ui8BlockIdx, pui8Data);
     }
   }
 
