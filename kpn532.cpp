@@ -546,14 +546,20 @@ void PN532::InitGlobalSPI() {
   SPI.beginTransaction(SPISettings(PN532_SPEED, LSBFIRST, SPI_MODE0));  // we start it globally because we do not use SPI for other operations
 }
 
-void PN532::PrintHex(const byte *pcbData, const size_t cbData) {
-  size_t i;
+void PN532::PrintHex(const byte *pcbData, const size_t cbData, const uint8_t flags) {
+  size_t i, idx;
 
   for (i = 0; i < cbData; i++) {
-    if (pcbData[i] < 0x10) {
+      
+    idx = (flags & PN532_PRINTHEX_REV) ? cbData - 1 - i : i;
+      
+    if (pcbData[idx] < 0x10) {
       Serial.print("0");
     }
-    Serial.print(pcbData[i] & 0xff, HEX);
+    Serial.print(pcbData[idx] & 0xff, HEX);
   }
-  Serial.println();
+  
+  if(!(flags & PN532_PRINTHEX_NOLN)) {
+    Serial.println();
+  }
 }

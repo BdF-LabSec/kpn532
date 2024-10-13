@@ -49,6 +49,10 @@ typedef enum _PN532_FRAME_TYPE {
 } PN532_FRAME_TYPE,
   *PPN532_FRAME_TYPE;
 
+#define PN532_PRINTHEX_NONE 0b00000000
+#define PN532_PRINTHEX_NOLN 0b00000001
+#define PN532_PRINTHEX_REV  0b00000010
+
 #pragma pack(push)
 #pragma pack(1)
 typedef struct _PN53X_REGISTER_VALUE {
@@ -133,7 +137,7 @@ private:
 
 public:
   static void InitGlobalSPI();
-  static void PrintHex(const byte *pcbData, const size_t cbData);
+  static void PrintHex(const byte *pcbData, const size_t cbData, const uint8_t flags = PN532_PRINTHEX_NONE);
 };
 
 #define PN532_CMD_Diagnose 0x00
