@@ -5,7 +5,7 @@
 */
 #include "kpn532_st25tb.h"
 
-ST25TB::ST25TB(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine) {
+ST25TB::ST25TB(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine) : bIgnoreTiming(0x00) {
   pNFC = new PN532(ss_pin, irq_pin, Routine);
 }
 
@@ -27,15 +27,17 @@ void ST25TB::begin() {
 }
 
 const uint8_t ST25TB_Initiator_CMD_Initiate_data[] = { ST25TB_CMD_INITIATE, 0x00 };
-uint8_t ST25TB::Initiate(uint8_t *pui8ChipId, uint8_t force) {
+uint8_t ST25TB::Initiate(uint8_t *pui8ChipId, uint8_t bForce) {
   uint8_t ret = 0;
   uint8_t *pReceived, cbReceived;
 
-  if (force) {
+  if (bForce) {
     pNFC->RfConfiguration__MaxRtyCOM(0xff);
   }
 
-  pNFC->RfConfiguration__Various_timings(0x00, 0x09);  // ~20 ms - ST25TB_INITIATOR_TIMEOUT_INITIATE
+  if(!bIgnoreTiming) {
+    pNFC->RfConfiguration__Various_timings(0x00, 0x09);  // ~20 ms - ST25TB_INITIATOR_TIMEOUT_INITIATE
+  }
 
   do {
     if (pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Initiate_data, sizeof(ST25TB_Initiator_CMD_Initiate_data), &pReceived, &cbReceived)) {
@@ -47,9 +49,9 @@ uint8_t ST25TB::Initiate(uint8_t *pui8ChipId, uint8_t force) {
         ret = 1;
       }
     }
-  } while (force && !ret);
+  } while (bForce && !ret);
 
-  if (force) {
+  if (bForce) {
     pNFC->RfConfiguration__MaxRtyCOM(0x00);
   }
 
@@ -60,7 +62,9 @@ uint8_t ST25TB::Select(const uint8_t ui8ChipId) {
   uint8_t ret = 0, ST25TB_Initiator_CMD_Select_data[] = { ST25TB_CMD_SELECT, ui8ChipId };
   uint8_t *pReceived, cbReceived;
 
-  pNFC->RfConfiguration__Various_timings(0x00, 0x08);  // ~10 ms - ST25TB_INITIATOR_TIMEOUT_SELECT
+  if(!bIgnoreTiming) {
+    pNFC->RfConfiguration__Various_timings(0x00, 0x08);  // ~10 ms - ST25TB_INITIATOR_TIMEOUT_SELECT
+  }
 
   if (pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Select_data, sizeof(ST25TB_Initiator_CMD_Select_data), &pReceived, &cbReceived)) {
     if (cbReceived == 1) {
@@ -81,7 +85,9 @@ const uint8_t ST25TB_Initiator_CMD_Get_Uid_data[] = { ST25TB_CMD_GET_UID };
 uint8_t ST25TB::Get_Uid(uint8_t pui8Data[8]) {
   uint8_t ret = 0, *pReceived, cbReceived;
 
-  pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~5 ms - ST25TB_INITIATOR_TIMEOUT_GENERIC
+  if(!bIgnoreTiming) {
+    pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~5 ms - ST25TB_INITIATOR_TIMEOUT_GENERIC
+  }
 
   if (pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Get_Uid_data, sizeof(ST25TB_Initiator_CMD_Get_Uid_data), &pReceived, &cbReceived)) {
     if (cbReceived == sizeof(uint64_t)) {
@@ -97,7 +103,9 @@ const uint8_t ST25TB_Initiator_CMD_Completion_data[] = { ST25TB_CMD_COMPLETION }
 uint8_t ST25TB::Completion() {
   uint8_t ret, errorCode;
 
-  pNFC->RfConfiguration__Various_timings(0x00, 0x01);  // 100 µs
+  if(!bIgnoreTiming) {
+    pNFC->RfConfiguration__Various_timings(0x00, 0x01);  // 100 µs
+  }
   ret = pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Completion_data, sizeof(ST25TB_Initiator_CMD_Completion_data), NULL, NULL, &errorCode);
   ret = (ret == 0x00) && (errorCode == 0x01);  // timeout
 
@@ -108,7 +116,9 @@ const uint8_t ST25TB_Initiator_CMD_Reset_to_inventory_data[] = { ST25TB_CMD_RESE
 uint8_t ST25TB::Reset_to_Inventory() {
   uint8_t ret, errorCode;
 
-  pNFC->RfConfiguration__Various_timings(0x00, 0x01);  // 100 µs
+  if(!bIgnoreTiming) {
+    pNFC->RfConfiguration__Various_timings(0x00, 0x01);  // 100 µs
+  }
   ret = pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Reset_to_inventory_data, sizeof(ST25TB_Initiator_CMD_Reset_to_inventory_data), NULL, NULL, &errorCode);
   ret = (ret == 0x00) && (errorCode == 0x01);  // timeout
 
@@ -119,7 +129,9 @@ uint8_t ST25TB::Read_Block(const uint8_t ui8BlockIdx, uint8_t pui8Data[4]) {
   uint8_t ret = 0, ST25TB_Initiator_CMD_Read_Block_data[] = { ST25TB_CMD_READ_BLOCK, ui8BlockIdx };
   uint8_t *pReceived, cbReceived;
 
-  pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~5 ms - ST25TB_INITIATOR_TIMEOUT_GENERIC
+  if(!bIgnoreTiming) {
+    pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~5 ms - ST25TB_INITIATOR_TIMEOUT_GENERIC
+  }
   if (pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Read_Block_data, sizeof(ST25TB_Initiator_CMD_Read_Block_data), &pReceived, &cbReceived)) {
     if (cbReceived == sizeof(uint32_t)) {
       *(uint32_t *)pui8Data = *(uint32_t *)pReceived;
@@ -134,7 +146,9 @@ uint8_t ST25TB::Write_Block(const uint8_t ui8BlockIdx, const uint8_t pui8Data[4]
   uint8_t ret, errorCode, ST25TB_Initiator_CMD_Write_Block_data[2 + 4] = { ST25TB_CMD_WRITE_BLOCK, ui8BlockIdx };
   *(uint32_t *)(ST25TB_Initiator_CMD_Write_Block_data + 2) = *((uint32_t *)pui8Data);
 
-  pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~ ST25TB_INITIATOR_DELAY_WRITE_TIME_COUNTER / ST25TB_INITIATOR_DELAY_WRITE_TIME_EEPROM
+  if(!bIgnoreTiming) {
+    pNFC->RfConfiguration__Various_timings(0x00, 0x07);  // ~ ST25TB_INITIATOR_DELAY_WRITE_TIME_COUNTER / ST25TB_INITIATOR_DELAY_WRITE_TIME_EEPROM
+  }
   ret = pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Write_Block_data, sizeof(ST25TB_Initiator_CMD_Write_Block_data), NULL, NULL, &errorCode);
   ret = (ret == 0x00) && (errorCode == 0x01);  // timeout
 

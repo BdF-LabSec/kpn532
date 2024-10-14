@@ -36,6 +36,7 @@ private:
 
 public:
   PN532 *pNFC;
+  uint8_t bIgnoreTiming;
   void begin();
 
   ST25TB(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine);  // Only IRQ
