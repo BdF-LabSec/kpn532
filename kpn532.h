@@ -96,6 +96,7 @@ public:
   uint8_t PowerDown();  // TODO
   // RFcommunication
   uint8_t RfConfiguration__RF_field(uint8_t ConfigurationData);                               // CfgItem = 0x01: RF field (AutoRFCA & RF on/off)
+  void RfConfiguration__RF_field_fast(uint8_t ConfigurationData, unsigned int microseconds = 0);
   uint8_t RfConfiguration__Various_timings(uint8_t fATR_RES_Timeout, uint8_t fRetryTimeout);  // CfgItem = 0x02: Various timings (fATR_RES_Timeout & fRetryTimeout)
   uint8_t RfConfiguration__MaxRtyCOM(uint8_t ConfigurationData);                              // CfgItem = 0x04: MaxRtyCOM
   uint8_t RfConfiguration__MaxRetries(uint8_t MxRtyPassiveActivation = 0xff);                 // CfgItem = 0x05: MaxRetries (MxRtyATR, MxRtyPSL & MxRtyPassiveActivation)

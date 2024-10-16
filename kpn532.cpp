@@ -162,6 +162,18 @@ uint8_t PN532::RfConfiguration__RF_field(uint8_t ConfigurationData) {
   return Information_Frame_Exchange();
 }
 
+void PN532::RfConfiguration__RF_field_fast(uint8_t ConfigurationData, unsigned int microseconds) {
+  PACKET_DATA_IN[0] = PN532_CMD_RFConfiguration;
+  PACKET_DATA_IN[1] = 0x01;
+  PACKET_DATA_IN[2] = ConfigurationData;
+  this->cbData = 3;
+
+  Information_Frame_Host_To_PN532();
+  if(microseconds) {
+    delayMicroseconds(microseconds);
+  }
+}
+
 uint8_t PN532::RfConfiguration__Various_timings(uint8_t fATR_RES_Timeout, uint8_t fRetryTimeout) {
   PACKET_DATA_IN[0] = PN532_CMD_RFConfiguration;
   PACKET_DATA_IN[1] = 0x02;
