@@ -4,7 +4,7 @@
    Licence : https://creativecommons.org/licenses/by/4.0/
 */
 #pragma GCC optimize("-Ofast")
-#include "kpn532_st25tb.h"
+#include <kpn532_st25tb.h>
 
 #define KPN532_ST25TB_VERBOSE 0
 
