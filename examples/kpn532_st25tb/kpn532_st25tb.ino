@@ -66,7 +66,7 @@ void loop(void) {
   pST25TB->pNFC->RfConfiguration__RF_field(0x01);
   delay(10);
 
-  pOutput->print("| Initiate... ");
+  pOutput->print("| Initiate...");
   if (pST25TB->Initiate(&ui8ChipId, 0x01)) {
     OUTPUT_NEWLINE_SAME();
     pOutput->print("ChipId: ");
