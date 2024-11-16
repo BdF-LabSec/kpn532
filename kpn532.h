@@ -129,7 +129,11 @@ public:
 
 private:
   uint8_t _ss, _irq;
+  uint8_t _spi_acquired;
   uint8_t Buffer[262 + 2 + 9], cbData;
+
+  void acquireSPI();
+  void releaseSPI();
 
   uint8_t Information_Frame_Exchange(uint8_t bNoAnswer = 0x00);
   uint8_t Wait_Ready_IRQ();
@@ -139,6 +143,10 @@ private:
 public:
   static void InitGlobalSPI();
   static void PrintHex(const byte *pcbData, const size_t cbData, const uint8_t flags = PN532_PRINTHEX_NONE);
+  static Print * _pOutput;
+  
+private:
+  static uint8_t _bUseGlobalSPI;
 };
 
 #define PN532_CMD_Diagnose 0x00

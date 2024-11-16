@@ -5,8 +5,23 @@
 */
 #pragma GCC optimize("-Ofast")
 #include <kpn532.h>
+#define KPN532_0_CS 10
+#define KPN532_0_IRQ 3
+#define KPN532_1_CS 9
+#define KPN532_1_IRQ 2
+
 #define KPN532_RELAY_VERBOSE 0  // or 1, be careful, verbose slow down the relay
 #define KPN532_RELAY_RAW 0      // 0 = TgGetData, InDataExchange, TgSetData (WTX, slower, overall faster because ISO/DEP and no real deselect/hlt), 1 = TgGetInitiatorCommand, InCommunicateThru, TgResponseToInitiator (no WTX, faster, overall slower because of real deselect/hlt),
+
+#if KPN532_RELAY_RAW == 0
+#define KPN532_RELAY_GET TgGetData
+#define KPN532_RELAX_EXC InDataExchange
+#define KPN532_RELAY_SET TgSetData
+#else
+#define KPN532_RELAY_GET TgGetInitiatorCommand
+#define KPN532_RELAX_EXC InCommunicateThru
+#define KPN532_RELAY_SET TgResponseToInitiator
+#endif
 
 PN532 *pNFCReader, *pNFCEmulator;
 
@@ -20,61 +35,44 @@ void ISR_NFCEmulator() {
 
 void setup(void) {
   Serial.begin(115200);
-  PN532::InitGlobalSPI();
+  PN532::InitGlobalSPI(); // this example will use SPI only for PN532(s)
 
-  pNFCReader = new PN532(10, 3, ISR_NFCReader);
-  pNFCEmulator = new PN532(9, 2, ISR_NFCEmulator);
-
-  Serial.println("\x1b[2J\x1b[3J\x1b[H");
-  Serial.println("  .#####.         kirelay 0.2 (Arduino with kpn532 - single board)");
-  Serial.println(" .## ^ ##.__ _    \"A La Vie, A L\'Amour\" - (oe.eo)");
-  Serial.println(" ## / \\ /   ('>-");
-  Serial.println(" ## \\ / | K  |    /*** Benjamin DELPY `gentilkiwi`");
-  Serial.println(" '## v #\\____/         benjamin.delpy@banque-france.fr");
-  Serial.println("  '#####' L\\_          benjamin@gentilkiwi.com         ***/");
-  Serial.println();
-
-  Serial.print("| Relay verbosity: ");
-  Serial.println(KPN532_RELAY_VERBOSE ? "full" : "minimal");
-  Serial.print("| Relay mode     : ");
+  Serial.println("- kpn532 relay -");
+  Serial.print("V:");
+  Serial.print(KPN532_RELAY_VERBOSE ? "full" : "min");
+  Serial.print(" M:");
   Serial.println(KPN532_RELAY_RAW ? "RAW" : "ISO/DEP");
 
-  Serial.println("| PN532 #0 - Reader init...");
-  pNFCReader->begin();
-  Serial.println("| PN532 #1 - Emulator init...");
-  pNFCEmulator->begin();
-  Serial.println("| Initialization OK!");
-}
+  pNFCReader = new PN532(KPN532_0_CS, KPN532_0_IRQ, ISR_NFCReader);
+  pNFCEmulator = new PN532(KPN532_1_CS, KPN532_1_IRQ, ISR_NFCEmulator);
 
-#if KPN532_RELAY_RAW == 0
-#define KPN532_RELAY_GET TgGetData
-#define KPN532_RELAX_EXC InDataExchange
-#define KPN532_RELAY_SET TgSetData
-#else
-#define KPN532_RELAY_GET TgGetInitiatorCommand
-#define KPN532_RELAX_EXC InCommunicateThru
-#define KPN532_RELAY_SET TgResponseToInitiator
-#endif
+  Serial.print("0|");
+  pNFCReader->begin();
+  Serial.print("1|");
+  pNFCEmulator->begin();
+}
 
 void loop(void) {
 
   uint8_t *pResult, cbResult, bSuccess;
   uint8_t UID[10], cbUID = 0, SENS_RES[2], SEL_RES;
 
-  Serial.println("~ Waiting for target...");
+  Serial.print("~Waiting target~");
   if (pNFCReader->InListPassiveTarget(UID, sizeof(UID), &cbUID, SENS_RES, &SEL_RES)) {
-    Serial.print("| Detected target\r\n|   SENS_RES: ");
+    Serial.println();
+    Serial.print("SENS_RES: ");
     PN532::PrintHex(SENS_RES, sizeof(SENS_RES));
-    Serial.print("|   SEL_RES : ");
+    Serial.print("SEL_RES : ");
     PN532::PrintHex(&SEL_RES, 1);
-    Serial.print("|   UID     : ");
+    Serial.print(' ');
     PN532::PrintHex(UID, cbUID);
 
-    Serial.println("~ Waiting for reader on emulator...");
+    Serial.print("~Waiting reader~");
     if (pNFCEmulator->TgInitAsTarget(UID, cbUID, SENS_RES, SEL_RES)) {
-      Serial.println("| Reader detected!");
+      Serial.println();
+      Serial.println("|Reader detected!");
       do {
-        bSuccess = 0;
+        bSuccess = 0x00;
 
         if (pNFCEmulator->KPN532_RELAY_GET(&pResult, &cbResult)) {
 #if KPN532_RELAY_VERBOSE
@@ -92,7 +90,7 @@ void loop(void) {
       } while (bSuccess);
 
       if (pNFCReader->InRelease()) {
-        Serial.println("| Target released");
+        Serial.println("|Target released");
       }
     }
   }

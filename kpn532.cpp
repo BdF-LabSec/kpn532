@@ -4,6 +4,11 @@
    Licence : https://creativecommons.org/licenses/by/4.0/
 */
 #include "kpn532.h"
+
+Print * PN532::_pOutput = &Serial;
+uint8_t PN532::_bUseGlobalSPI = 0x00;
+const SPISettings PN532_SPISETTINGS = {SPISettings(PN532_SPEED, LSBFIRST, SPI_MODE0)};
+
 const uint8_t PN532_ACK[] = { PN532_Data_Writing, 0x00, 0x00, 0xff, 0x00, 0xff, 0x00 };
 const uint8_t PN532_NACK[] = { PN532_Data_Writing, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00 };
 
@@ -11,7 +16,7 @@ const uint8_t PN532_NACK[] = { PN532_Data_Writing, 0x00, 0x00, 0xff, 0xff, 0x00,
 #define PACKET_DATA_OUT (this->Buffer + 8)
 
 PN532::PN532(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine)
-  : IrqState(HIGH), _ss(ss_pin), _irq(irq_pin) {
+  : IrqState(HIGH), _ss(ss_pin), _irq(irq_pin), _spi_acquired(0x00) {
   pinMode(_ss, OUTPUT);
   digitalWrite(this->_ss, HIGH);
 
@@ -22,6 +27,27 @@ PN532::PN532(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Rou
 
 PN532::~PN532() {
   detachInterrupt(digitalPinToInterrupt(this->_irq));
+  releaseSPI();
+}
+
+void PN532::acquireSPI() {
+  if(!_bUseGlobalSPI) {
+    SPI.beginTransaction(PN532_SPISETTINGS);
+    _spi_acquired = 0x01;
+  }
+  digitalWrite(this->_ss, LOW);
+}
+
+void PN532::releaseSPI() {
+  if(!_bUseGlobalSPI) {
+    if(_spi_acquired) {
+      SPI.endTransaction();
+      _spi_acquired = 0x00;
+      digitalWrite(this->_ss, HIGH);
+    }
+  } else {
+    digitalWrite(this->_ss, HIGH);
+  }
 }
 
 void PN532::begin() {
@@ -31,18 +57,18 @@ void PN532::begin() {
 #endif
 
   while (true) {
-    digitalWrite(this->_ss, LOW);
+    acquireSPI();
     delay(PN532_T_osc_start);
     SPI.transfer(PN532_Status_Reading);
     status = SPI.transfer(0x42);
-    digitalWrite(this->_ss, HIGH);
+    releaseSPI();
 
     if ((status != 0xff) && (status != 0xaa)) {  // seen, 0xff (init ?), 0xaa (default char ?), 0x08 (?), last bit - & 0x01 (ready or not ready)
       if (status & 0x01) {
         memcpy(this->Buffer, PN532_ACK, sizeof(PN532_ACK));
-        digitalWrite(this->_ss, LOW);
+        acquireSPI();
         SPI.transfer(this->Buffer, sizeof(PN532_ACK));
-        digitalWrite(this->_ss, HIGH);
+        releaseSPI();
       } else {
         break;
       }
@@ -52,7 +78,7 @@ void PN532::begin() {
 
   if (!SAMConfiguration(0x01)) {
 #if (KPN532_OUTPUT_LEVEL >= KPN532_OUTPUT_LEVEL_ERROR)
-    Serial.println("Bad SAMConfiguration :(");
+    _pOutput->println("Bad SAMConfiguration :(");
 #endif
     while (1)
       ;
@@ -60,19 +86,20 @@ void PN532::begin() {
 
 #if (KPN532_OUTPUT_LEVEL >= KPN532_OUTPUT_LEVEL_INFO)
   if (GetFirmwareVersion(&IC, &Ver, &Rev, &Support)) {
-    Serial.print("|   PN5");
-    Serial.print(IC, HEX);
-    Serial.print(" version ");
-    Serial.print(Ver, DEC);
-    Serial.print(".");
-    Serial.print(Rev, DEC);
-    Serial.print(".");
-    Serial.println(Support, DEC);
-  }
-
-  if (ReadRegister(PN53X_REG_CIU_Version, &Ver)) {
-    Serial.print("|   CIU Version 0x");
-    Serial.println(Ver, HEX);
+    _pOutput->print("PN5");
+    _pOutput->print(IC, HEX);
+    _pOutput->print(' ');
+    _pOutput->print(Ver, DEC);
+    _pOutput->print('.');
+    _pOutput->print(Rev, DEC);
+    _pOutput->print('.');
+    _pOutput->print(Support, DEC);
+    
+    if (ReadRegister(PN53X_REG_CIU_Version, &Ver)) {
+      _pOutput->print(' ');
+      _pOutput->print(Ver, HEX);
+    }
+    _pOutput->println();
   }
 #endif
 }
@@ -504,9 +531,9 @@ void PN532::Information_Frame_Host_To_PN532() {
     this->Buffer[7 + this->cbData] = ~DCS + 1;
     this->Buffer[7 + this->cbData + 1] = 0x00;
 
-    digitalWrite(_ss, LOW);
+    acquireSPI();
     SPI.transfer(this->Buffer, 7 + this->cbData + 1 + 1);
-    digitalWrite(_ss, HIGH);
+    releaseSPI();
 
     this->IrqState = HIGH;
   }
@@ -519,7 +546,7 @@ PN532_FRAME_TYPE PN532::Generic_Frame_PN532_To_Host() {
   this->Buffer[0] = PN532_Data_Reading;
   this->cbData = 7;
 
-  digitalWrite(_ss, LOW);
+  acquireSPI();
   SPI.transfer(this->Buffer, this->cbData);  // we want the return value here :)
   cbDataIn = this->Buffer[4];                // often used
 
@@ -548,14 +575,15 @@ PN532_FRAME_TYPE PN532::Generic_Frame_PN532_To_Host() {
     }
   }
 
-  digitalWrite(_ss, HIGH);
+  releaseSPI();
 
   return ret;
 }
 
 void PN532::InitGlobalSPI() {
   SPI.begin();
-  SPI.beginTransaction(SPISettings(PN532_SPEED, LSBFIRST, SPI_MODE0));  // we start it globally because we do not use SPI for other operations
+  SPI.beginTransaction(PN532_SPISETTINGS);  // we start it globally because we do not use SPI for other operations
+  _bUseGlobalSPI = 0x01;
 }
 
 void PN532::PrintHex(const byte *pcbData, const size_t cbData, const uint8_t flags) {
@@ -566,12 +594,12 @@ void PN532::PrintHex(const byte *pcbData, const size_t cbData, const uint8_t fla
     idx = (flags & PN532_PRINTHEX_REV) ? cbData - 1 - i : i;
       
     if (pcbData[idx] < 0x10) {
-      Serial.print("0");
+      _pOutput->print('0');
     }
-    Serial.print(pcbData[idx] & 0xff, HEX);
+    _pOutput->print(pcbData[idx] & 0xff, HEX);
   }
   
   if(!(flags & PN532_PRINTHEX_NOLN)) {
-    Serial.println();
+    _pOutput->println();
   }
 }
