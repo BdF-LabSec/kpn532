@@ -91,7 +91,7 @@ uint8_t ST25TB::Get_Uid(uint8_t pui8Data[8]) {
 
   if (pNFC->InCommunicateThru(ST25TB_Initiator_CMD_Get_Uid_data, sizeof(ST25TB_Initiator_CMD_Get_Uid_data), &pReceived, &cbReceived)) {
     if (cbReceived == sizeof(uint64_t)) {
-      *(uint64_t *)pui8Data = *(uint64_t *)pReceived;
+      memcpy(pui8Data, pReceived, sizeof(uint64_t));
       ret = 1;
     }
   }
