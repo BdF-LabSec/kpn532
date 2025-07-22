@@ -4,7 +4,7 @@
    Licence : https://creativecommons.org/licenses/by/4.0/
 */
 #pragma GCC optimize("-Ofast")
-#include <kpn532_st25tb.h>
+#include <kpn532.h>
 #define KPN532_0_CS 10
 #define KPN532_0_IRQ 3
 
