@@ -113,7 +113,7 @@ public:
   uint8_t InPSL();                                                                                                      // TODO
   uint8_t InDataExchange(const uint8_t *pcbInData, const uint8_t cbInData, uint8_t **ppReceived = NULL, uint8_t *pcbReceived = NULL, uint8_t *pErrorCode = NULL);
   uint8_t InCommunicateThru(const uint8_t *pcbInData, const uint8_t cbInData, uint8_t **ppReceived = NULL, uint8_t *pcbReceived = NULL, uint8_t *pErrorCode = NULL);
-  uint8_t InDeselect();  // TODO
+  uint8_t InDeselect(uint8_t *pErrorCode = NULL);
   uint8_t InRelease(uint8_t *pErrorCode = NULL);
   uint8_t InSelect();    // TODO
   uint8_t InAutoPoll();  // TODO

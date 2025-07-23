@@ -26,9 +26,22 @@
 #define MIFARE_CLASSIC_CMD_READ						0x30
 #define MIFARE_CLASSIC_CMD_WRITE					0xa0
 
+#define MIFARE_CLASSIC_GEN1A_OPERATION_UNLOCK       MIFARE_CLASSIC_CMD_SET_MOD_TYPE
+#define MIFARE_CLASSIC_GEN1A_OPERATION_WIPE         0x41
+
+#define MIFARE_CLASSIC_ACK                          (0xA)
+#define MIFARE_CLASSIC_INVALID_OPERATION            (0x0)
+#define MIFARE_CLASSIC_PARITY_CRC                   (0x1)
+#define MIFARE_CLASSIC_INVALID_OPERATION_NB         (0x4 | MIFARE_CLASSIC_INVALID_OPERATION)
+#define MIFARE_CLASSIC_PARITY_CRC_NB                (0x4 | MIFARE_CLASSIC_PARITY_CRC)
+
 class MFC {
 private:
   uint8_t MFC_BUFFER[1 + 1 + 16];
+  
+  uint8_t Special_Gen1a_generic(const uint8_t operation, const uint8_t bNoHalt = 0x00);
+  uint8_t Special_Gen1a_generic_instruction(const uint8_t Instruction, uint8_t SpecificBits);
+  
 public:
   PN532 *pNFC;
   uint8_t UID[MIFARE_CLASSIC_UID_SIZE], cbUID, SENS_RES[2], SEL_RES;
@@ -43,6 +56,9 @@ public:
   uint8_t Authenticate(const uint8_t cmdAuthAB, const uint8_t blockId, const uint8_t key[MIFARE_CLASSIC_KEY_SIZE]);
   uint8_t Read(const uint8_t blockId, uint8_t **ppReceived);
   uint8_t Write(const uint8_t blockId, const uint8_t *pcbData);
+  
+  uint8_t Special_Gen1a_unlock();
+  //uint8_t Special_Gen1a_wipe();
 };
 
 #endif

@@ -335,11 +335,30 @@ uint8_t PN532::InCommunicateThru(const uint8_t *pcbInData, const uint8_t cbInDat
   return ret;
 }
 
+uint8_t PN532::InDeselect(uint8_t *pErrorCode) {
+  uint8_t ret = 0, errorCode;
+
+  PACKET_DATA_IN[0] = PN532_CMD_InDeselect;
+  PACKET_DATA_IN[1] = 0x01;
+  this->cbData = 2;
+
+  if (Information_Frame_Exchange() && this->cbData) {
+    errorCode = PACKET_DATA_OUT[0] & 0x3f;
+    if (!errorCode) {
+      ret = 1;
+    } else if (pErrorCode) {
+      *pErrorCode = errorCode;
+    }
+  }
+
+  return ret;
+}
+
 uint8_t PN532::InRelease(uint8_t *pErrorCode) {
   uint8_t ret = 0, errorCode;
 
   PACKET_DATA_IN[0] = PN532_CMD_InRelease;
-  PACKET_DATA_IN[1] = 0x00;
+  PACKET_DATA_IN[1] = 0x01;
   this->cbData = 2;
 
   if (Information_Frame_Exchange() && this->cbData) {
