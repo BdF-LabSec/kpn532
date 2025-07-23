@@ -20,7 +20,7 @@ void setup() {
     ;
   PN532::InitGlobalSPI();  // this example will use SPI only for PN532(s)
 
-  Serial.println("-* Simple MFC *-");
+  Serial.println("Simple MFC Gen1a");
 
   pMFC = new MFC(KPN532_0_CS, KPN532_0_IRQ, ISR_NFCReader);
 
