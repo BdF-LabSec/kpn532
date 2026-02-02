@@ -180,7 +180,12 @@ Presented UID can be different from the original.
     - Only 4 bytes in total, 3 bytes available.
 
 #### Seen as `Felica`
-Sometimes the presented card can be seen as `Felica`. Move the original card to a better position on the antenna, then try again (with a `reset`).
+Sometimes the presented card can be seen as `Felica`: try again (with a `reset`), it's a chip normal behavior:
+```
+* Used to configure the IC to handle Felica polling or MIFARE anti-collision in Target/Card Mode.
+* Parameter wMode option is irrelevant in case of Pn512 as only NFC Target mode is supported and cannot be
+* individually configured to either Type A or Type F target.
+```
 
 #### Traces
 With a NXP TagInfo scan
