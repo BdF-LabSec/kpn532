@@ -4,6 +4,7 @@
    Licence : https://creativecommons.org/licenses/by/4.0/
 */
 #include "kpn532_st25tb.h"
+#pragma GCC optimize("-Ofast")
 
 ST25TB::ST25TB(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine) : bIgnoreTiming(0x00) {
   pNFC = new PN532(ss_pin, irq_pin, Routine);

@@ -4,6 +4,15 @@
    Licence : https://creativecommons.org/licenses/by/4.0/
 */
 #include "kpn532.h"
+#pragma GCC optimize("-Ofast")
+
+#if defined(__AVR__)
+#define KPN532_SS_LOW()  *_ssPort &= ~_ssMask
+#define KPN532_SS_HIGH() *_ssPort |= _ssMask
+#else
+#define KPN532_SS_LOW()  digitalWrite(_ss, LOW)
+#define KPN532_SS_HIGH() digitalWrite(_ss, HIGH)
+#endif
 
 Print * PN532::_pOutput = &Serial;
 uint8_t PN532::_bUseGlobalSPI = 0x00;
@@ -16,9 +25,15 @@ const uint8_t PN532_NACK[] = { PN532_Data_Writing, 0x00, 0x00, 0xff, 0xff, 0x00,
 #define PACKET_DATA_OUT (this->Buffer + 8)
 
 PN532::PN532(const uint8_t ss_pin, const uint8_t irq_pin, PISR_PN532_ROUTINE Routine)
-  : IrqState(HIGH), _ss(ss_pin), _irq(irq_pin), _spi_acquired(0x00) {
-  pinMode(_ss, OUTPUT);
-  digitalWrite(this->_ss, HIGH);
+  : IrqState(HIGH), _irq(irq_pin), _spi_acquired(0x00) {
+  pinMode(ss_pin, OUTPUT);
+#if defined(__AVR__)
+  this->_ssPort = portOutputRegister(digitalPinToPort(ss_pin));
+  this->_ssMask = digitalPinToBitMask(ss_pin);
+#else
+  this->_ss = ss_pin;
+#endif
+  KPN532_SS_HIGH();
 
   pinMode(this->_irq, INPUT);
 
@@ -35,7 +50,7 @@ void PN532::acquireSPI() {
     SPI.beginTransaction(PN532_SPISETTINGS);
     _spi_acquired = 0x01;
   }
-  digitalWrite(this->_ss, LOW);
+  KPN532_SS_LOW();
 }
 
 void PN532::releaseSPI() {
@@ -43,10 +58,10 @@ void PN532::releaseSPI() {
     if(_spi_acquired) {
       SPI.endTransaction();
       _spi_acquired = 0x00;
-      digitalWrite(this->_ss, HIGH);
+      KPN532_SS_HIGH();
     }
   } else {
-    digitalWrite(this->_ss, HIGH);
+    KPN532_SS_HIGH();
   }
 }
 
@@ -375,7 +390,7 @@ uint8_t PN532::InRelease(uint8_t *pErrorCode) {
 
 // Target
 
-uint8_t PN532::TgInitAsTarget(uint8_t *pbUID, uint8_t cbUID, uint8_t SENS_RES[2], uint8_t SEL_RES) {
+uint8_t PN532::TgInitAsTarget(const uint8_t *pbUID, uint8_t cbUID, const uint8_t SENS_RES[2], uint8_t SEL_RES) {
   uint8_t ret = 0, mode;
 
   if (cbUID >= 4) {
@@ -503,11 +518,6 @@ uint8_t PN532::Information_Frame_Exchange(uint8_t bNoAnswer) {
         // but sending ACK (or consecutive command) is to abord the current command :(
         // Strategy is now to use smaller timeout (100µs) and to handle it in protocol
         // using bNoAnswer = 1 is now only for particular usage
-        //
-        // memcpy(this->Buffer, PN532_ACK, sizeof(PN532_ACK));
-        // digitalWrite(this->_ss, LOW);
-        // SPI.transfer(this->Buffer, sizeof(PN532_ACK));
-        // digitalWrite(this->_ss, HIGH);
         ret = 1;
       } else {
         if (Wait_Ready_IRQ()) {

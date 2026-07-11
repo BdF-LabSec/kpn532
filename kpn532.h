@@ -118,7 +118,7 @@ public:
   uint8_t InSelect();    // TODO
   uint8_t InAutoPoll();  // TODO
   // Target
-  uint8_t TgInitAsTarget(uint8_t *pbUID, uint8_t cbUID, uint8_t SENS_RES[2], uint8_t SEL_RES);
+  uint8_t TgInitAsTarget(const uint8_t *pbUID, uint8_t cbUID, const uint8_t SENS_RES[2], uint8_t SEL_RES);
   uint8_t TgSetGeneralBytes();  // TODO
   uint8_t TgGetData(uint8_t **ppReceived, uint8_t *pcbReceived, uint8_t *pErrorCode = NULL);
   uint8_t TgSetData(const uint8_t *pcbInData, const uint8_t cbInData, uint8_t *pErrorCode = NULL);
@@ -128,8 +128,14 @@ public:
   uint8_t TgGetTargetStatus();      // TODO
 
 private:
-  uint8_t _ss, _irq;
+  uint8_t _irq;
   uint8_t _spi_acquired;
+#if defined(__AVR__)
+  volatile uint8_t *_ssPort;  // direct port access for CS
+  uint8_t _ssMask;
+#else
+  uint8_t _ss;  // for classical digitalWrite
+#endif
   uint8_t Buffer[262 + 2 + 9], cbData;
 
   void acquireSPI();
