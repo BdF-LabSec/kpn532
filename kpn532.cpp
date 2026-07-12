@@ -15,7 +15,6 @@
 #endif
 
 Print * PN532::_pOutput = &Serial;
-uint8_t PN532::_bUseGlobalSPI = 0x00;
 const SPISettings PN532_SPISETTINGS = {SPISettings(PN532_SPEED, LSBFIRST, SPI_MODE0)};
 
 const uint8_t PN532_ACK[] = { PN532_Data_Writing, 0x00, 0x00, 0xff, 0x00, 0xff, 0x00 };
@@ -46,23 +45,23 @@ PN532::~PN532() {
 }
 
 void PN532::acquireSPI() {
-  if(!_bUseGlobalSPI) {
-    SPI.beginTransaction(PN532_SPISETTINGS);
-    _spi_acquired = 0x01;
-  }
+#if !defined(KPN532_SPI_EXCLUSIVE)
+  SPI.beginTransaction(PN532_SPISETTINGS);
+  _spi_acquired = 0x01;
+#endif
   KPN532_SS_LOW();
 }
 
 void PN532::releaseSPI() {
-  if(!_bUseGlobalSPI) {
-    if(_spi_acquired) {
-      SPI.endTransaction();
-      _spi_acquired = 0x00;
-      KPN532_SS_HIGH();
-    }
-  } else {
+#if defined(KPN532_SPI_EXCLUSIVE)
+  KPN532_SS_HIGH();
+#else
+  if(_spi_acquired) {
+    SPI.endTransaction();
+    _spi_acquired = 0x00;
     KPN532_SS_HIGH();
   }
+#endif
 }
 
 void PN532::begin() {
@@ -609,11 +608,12 @@ PN532_FRAME_TYPE PN532::Generic_Frame_PN532_To_Host() {
   return ret;
 }
 
+#if defined(KPN532_SPI_EXCLUSIVE)
 void PN532::InitGlobalSPI() {
   SPI.begin();
   SPI.beginTransaction(PN532_SPISETTINGS);  // we start it globally because we do not use SPI for other operations
-  _bUseGlobalSPI = 0x01;
 }
+#endif
 
 void PN532::PrintHex(const byte *pcbData, const size_t cbData, const uint8_t flags) {
   size_t i, idx;

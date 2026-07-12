@@ -8,6 +8,8 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+#define KPN532_SPI_EXCLUSIVE
+
 /* A little note about SPI speed on NXP PN532:
 
    SPI maximum speed is officially @ 5 MHz (PN532_C1 - 8.3.5)
@@ -147,12 +149,11 @@ private:
   PN532_FRAME_TYPE Generic_Frame_PN532_To_Host();
 
 public:
+#if defined(KPN532_SPI_EXCLUSIVE)
   static void InitGlobalSPI();
+#endif
   static void PrintHex(const byte *pcbData, const size_t cbData, const uint8_t flags = PN532_PRINTHEX_NONE);
   static Print * _pOutput;
-  
-private:
-  static uint8_t _bUseGlobalSPI;
 };
 
 #define PN532_CMD_Diagnose 0x00
