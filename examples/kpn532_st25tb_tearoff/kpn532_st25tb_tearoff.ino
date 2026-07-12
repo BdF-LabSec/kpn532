@@ -12,72 +12,35 @@
 #define KPN532_0_CS 10
 #define KPN532_0_IRQ 3
 
+#define KPN532_ST25TB_TEAROFF_LOG 1
+
 ST25TB *pST25TB;
-
-#define KPN532_USE_KSSD1309_CONSOLE 0  // or 1 to enable output to SSD1309 console
-
-#if !KPN532_USE_KSSD1309_CONSOLE
-#define OUTPUT_NEWLINE_SAME(o) Serial.println()
-#else
-#include <ssd1309.h>
-#define SSD1309_CS 8
-#define SSD1309_DC 4
-#define SSD1309_RST 5
-SSD1309 *pDisplay;
-
-#include <console.h>
-Console *pConsole;
-#define OUTPUT_NEWLINE_SAME(o) pConsole->RestartCurrentLine(o)
-#endif
-
-Print *pOutput;
 
 void ISR_NFC0() {
   pST25TB->pNFC->IrqState = 0;
 }
 
-#define KPN532_ST25TB_TEAROFF_LOG 1
-
 bool MODE_tear_Counter(const uint8_t counter, const uint32_t current, uint32_t target);
 bool st25tb_tear_off(const int8_t block_address, uint32_t current_value, uint32_t target_value, uint32_t tear_off_adjustment_us);
 
 void setup(void) {
-
-#if !KPN532_USE_KSSD1309_CONSOLE
   Serial.begin(115200);
   while (!Serial)
     ;
-  PN532::InitGlobalSPI();  // this example will use SPI only for PN532(s)
-
-  pOutput = &Serial;
-#else
-  SPI.begin();  // Using SSD1309 will make the SPI bus to be shared with PN532(s)
-
-  pDisplay = new SSD1309(SSD1309_CS, SSD1309_DC, SSD1309_RST);
-  pDisplay->begin();
-  pConsole = new Console(pDisplay);
-  pConsole->ClearScreen();
-  pOutput = pConsole;
-  PN532::_pOutput = pOutput;
-#endif
+  PN532::InitGlobalSPI();
 
   randomSeed(analogRead(0));
 
-  pOutput->println("-st25tb tearoff-");
+  Serial.println("-st25tb tearoff-");
 
   pST25TB = new ST25TB(KPN532_0_CS, KPN532_0_IRQ, ISR_NFC0);
-
-  pOutput->print("0|");
   pST25TB->begin();
-
-  //pST25TB->pNFC->WriteRegister(PN53X_REG_CIU_AnalogTest, 0b11001101);
 }
 
 void loop(void) {
   MOD_Tear();
 
-  pOutput->print("END");
-
+  Serial.print("END");
   while (1)
     ;
 }
@@ -106,10 +69,10 @@ bool MODE_tear_Counter(const uint8_t counter, const uint32_t current, uint32_t t
   bool ret;
   unsigned long diff_time, minutes, seconds;
 
-  pOutput->print(counter);
-  pOutput->print("t|");
+  Serial.print(counter);
+  Serial.print("t|");
 #if !KPN532_ST25TB_TEAROFF_LOG
-  pOutput->print(" ...");
+  Serial.print(" ...");
 #endif
   if (current < target) {
     diff_time = millis();
@@ -118,21 +81,21 @@ bool MODE_tear_Counter(const uint8_t counter, const uint32_t current, uint32_t t
     minutes = diff_time / 60000;
     seconds = (diff_time % 60000) / 1000;
 
-    OUTPUT_NEWLINE_SAME(3);
-    pOutput->print(' ');
+    Serial.println();
+    Serial.print(' ');
     if (minutes) {
-      pOutput->print(minutes);
-      pOutput->print("m ");
+      Serial.print(minutes);
+      Serial.print("m ");
     }
-    pOutput->print(seconds);
-    pOutput->print("s - ");
+    Serial.print(seconds);
+    Serial.print("s - ");
     if (ret) {
-      pOutput->println("OK");
+      Serial.println("OK");
     } else {
-      pOutput->println("KO :(");
+      Serial.println("KO :(");
     }
   } else {
-    pOutput->println(" not needed");
+    Serial.println(" not needed");
     ret = true;
   }
 
@@ -146,27 +109,27 @@ void MOD_Tear() {
 
   pST25TB->pNFC->RfConfiguration__RF_field(0x01);
 
-  pOutput->print("~wait for ST25TB");
+  Serial.print("~wait for ST25TB");
   if (pST25TB->Initiator_Initiate_Select_UID_C1_C2(UID, (uint8_t *)&c_sector5, (uint8_t *)&c_sector6)) {
-    OUTPUT_NEWLINE_SAME();
+    Serial.println();
     PN532::PrintHex(UID, sizeof(UID), PN532_PRINTHEX_REV);
 
     t_sector5 = t_sector6 = 0xfffffffe;
     //t_sector5 = 0x04000009;
     //t_sector6 = 0xfffffffd;
 
-    pOutput->print(ST25TB_IDX_COUNTER1);
-    pOutput->print("c|");
+    Serial.print(ST25TB_IDX_COUNTER1);
+    Serial.print("c|");
     PN532::PrintHex((const byte *)&c_sector5, sizeof(c_sector5), PN532_PRINTHEX_REV);
-    pOutput->print(ST25TB_IDX_COUNTER1);
-    pOutput->print("w|");
+    Serial.print(ST25TB_IDX_COUNTER1);
+    Serial.print("w|");
     PN532::PrintHex((const byte *)&t_sector5, sizeof(t_sector5), PN532_PRINTHEX_REV);
 
-    pOutput->print(ST25TB_IDX_COUNTER2);
-    pOutput->print("c|");
+    Serial.print(ST25TB_IDX_COUNTER2);
+    Serial.print("c|");
     PN532::PrintHex((const byte *)&c_sector6, sizeof(c_sector6), PN532_PRINTHEX_REV);
-    pOutput->print(ST25TB_IDX_COUNTER2);
-    pOutput->print("w|");
+    Serial.print(ST25TB_IDX_COUNTER2);
+    Serial.print("w|");
     PN532::PrintHex((const byte *)&t_sector6, sizeof(t_sector6), PN532_PRINTHEX_REV);
 
     pST25TB->bIgnoreTiming = 0x01;
@@ -262,8 +225,8 @@ uint8_t st25tb_tear_off_consolidate_block(const uint8_t block_address, uint32_t 
   if ((target_value >= 0xfffffffd) && (*read_back_value >= 0xfffffffd)) {
     result = st25tb_tear_off_is_consolidated(block_address, *read_back_value, 6, 10, read_back_value);
     if (result) {
-      OUTPUT_NEWLINE_SAME(3);
-      pOutput->print("consolidating");
+      Serial.println();
+      Serial.print("consolidating");
       result = st25tb_tear_off_is_consolidated(block_address, *read_back_value, 2, 2000, read_back_value);
       if (!result) {
         return 0;
@@ -276,12 +239,12 @@ uint8_t st25tb_tear_off_consolidate_block(const uint8_t block_address, uint32_t 
 
 void st25tb_tear_off_log(int tear_off_us, const char *color, uint32_t value) {
 #if KPN532_ST25TB_TEAROFF_LOG
-  OUTPUT_NEWLINE_SAME(3);
+  Serial.println();
   PN532::PrintHex((const byte *)&value, sizeof(value), PN532_PRINTHEX_REV | PN532_PRINTHEX_NOLN);
 
-  pOutput->print(' ');
-  pOutput->print(tear_off_us);
-  pOutput->print('u');
+  Serial.print(' ');
+  Serial.print(tear_off_us);
+  Serial.print('u');
 #else
   (void)tear_off_us;
   (void)color;
@@ -309,14 +272,14 @@ bool st25tb_tear_off(const int8_t block_address, uint32_t current_value, uint32_
   tear_off_value = st25tb_tear_off_next_value(current_value, false);
 
   if (tear_off_value == 0) {
-    pOutput->println("|Tear| Tear off technique not possible.");
+    Serial.println("|Tear| Tear off technique not possible.");
     return false;
   }
 
   while (true) {
     // Fail safe
     if (tear_off_value < 0x00100000) {
-      pOutput->println("|Tear| Stopped. Safety first !");
+      Serial.println("|Tear| Stopped. Safety first !");
       return false;
     }
 

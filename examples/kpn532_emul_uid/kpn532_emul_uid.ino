@@ -5,8 +5,8 @@
 */
 #pragma GCC optimize("-Ofast")
 #include <kpn532.h>
-#define KPN532_0_CS 9
-#define KPN532_0_IRQ 2
+#define KPN532_0_CS 10
+#define KPN532_0_IRQ 3
 
 PN532 *pNFC;
 

@@ -18,13 +18,11 @@ void setup() {
   Serial.begin(115200);
   while (!Serial)
     ;
-  PN532::InitGlobalSPI();  // this example will use SPI only for PN532(s)
+  PN532::InitGlobalSPI();
 
   Serial.println("Simple MFC Gen1a");
 
   pMFC = new MFC(KPN532_0_CS, KPN532_0_IRQ, ISR_NFCReader);
-
-  Serial.print("0|");
   pMFC->begin();
 }
 
@@ -48,10 +46,12 @@ void loop() {
           Serial.print("\t| ");
           PN532::PrintHex(pResult, MIFARE_CLASSIC_BLOCK_SIZE);
         } else {
-            Serial.print("READ Error on block: ");
-            Serial.println(i);
+          Serial.print("READ Error on block: ");
+          Serial.println(i);
         }
       }
+    } else {
+      Serial.println("Not Gen1a?");
     }
 
     if (pMFC->Release()) {

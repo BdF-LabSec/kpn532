@@ -35,7 +35,9 @@ void ISR_NFCEmulator() {
 
 void setup(void) {
   Serial.begin(115200);
-  PN532::InitGlobalSPI(); // this example will use SPI only for PN532(s)
+  // while (!Serial)
+  //   ;
+  PN532::InitGlobalSPI();
 
   Serial.println("- kpn532 relay -");
   Serial.print("V:");
